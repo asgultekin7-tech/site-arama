@@ -63,26 +63,28 @@ D.b.forEach(function(x){var o=document.createElement('option');o.value=x[0];o.te
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 
-/* benceburada: ana sayfa düzen düzeltmeleri (slider genişliği, "Kategoriye Git" linkleri) */
+/* benceburada: ana sayfa düzen düzeltmeleri (slider genişliği, "Kategoriye Git" linkleri) - sadece sayfa tamamen yüklendikten sonra çalışır */
 (function(){
   function fix(){
-    var c=document.querySelector('.anasayfa_tek_slider');
-    if(c){
-      c.style.setProperty('float','none','important');
-      c.style.setProperty('width','100%','important');
-      var o=c.querySelector('.owl-stage-outer');
-      if(o) o.style.setProperty('height','auto','important');
-    }
-    var b=document.querySelectorAll('.Block_Link');
-    for(var i=0;i<b.length;i++){
-      b[i].style.setProperty('position','static','important');
-      b[i].style.setProperty('display','block','important');
-      b[i].style.setProperty('text-align','right','important');
-      b[i].style.setProperty('margin','6px 0 0','important');
-    }
+    try{
+      var c=document.querySelector('.anasayfa_tek_slider');
+      if(c){
+        c.style.setProperty('float','none','important');
+        c.style.setProperty('width','100%','important');
+        var o=c.querySelector('.owl-stage-outer');
+        if(o) o.style.setProperty('height','auto','important');
+        var $=window.jQuery, inst=$ && $(c).data('owl.carousel');
+        if(inst && typeof inst.refresh==='function') inst.refresh();
+      }
+      var b=document.querySelectorAll('.Block_Link');
+      for(var i=0;i<b.length;i++){
+        b[i].style.setProperty('position','static','important');
+        b[i].style.setProperty('display','block','important');
+        b[i].style.setProperty('text-align','right','important');
+        b[i].style.setProperty('margin','6px 0 0','important');
+      }
+    }catch(e){}
   }
-  function run(){ fix(); try{ window.dispatchEvent(new Event('resize')); }catch(e){} }
-  if(document.readyState!=='loading') run(); else document.addEventListener('DOMContentLoaded',run);
-  window.addEventListener('load',run);
-  setTimeout(run,1500); setTimeout(run,4000);
+  function go(){ fix(); setTimeout(fix,1500); }
+  if(document.readyState==='complete') go(); else window.addEventListener('load',go);
 })();
