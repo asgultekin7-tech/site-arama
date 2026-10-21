@@ -63,14 +63,26 @@ D.b.forEach(function(x){var o=document.createElement('option');o.value=x[0];o.te
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 
-/* benceburada: ana sayfa düzen düzeltmeleri (slider genişliği, "Kategoriye Git" linkleri) - sadece sayfa tamamen yüklendikten sonra çalışır */
+/* benceburada: ana sayfa düzen düzeltmeleri (slider genişliği, "Kategoriye Git" linkleri) - sayfa yüklendikten sonra çalışır */
 (function(){
   function fix(){
     try{
       var c=document.querySelector('.anasayfa_tek_slider');
       if(c){
-        c.style.setProperty('float','none','important');
-        c.style.setProperty('width','100%','important');
+        var col=c.parentElement, nav=col&&col.querySelector('.newHeaderNavigation'), navW=0;
+        if(nav && getComputedStyle(nav).display!=='none') navW=nav.getBoundingClientRect().width;
+        var cs0=getComputedStyle(col), colW0=col.clientWidth-parseFloat(cs0.paddingLeft)-parseFloat(cs0.paddingRight);
+        if(navW>0 && navW<colW0*0.5){
+          /* geniş ekran: solda kategori menüsü var, slider yanına sığsın */
+          var cs=getComputedStyle(col);
+          var colW=col.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+          c.style.setProperty('float','right','important');
+          c.style.setProperty('width',Math.max(300,colW-navW-20)+'px','important');
+        }else{
+          /* dar ekran: menü yok, slider tam genişlik */
+          c.style.setProperty('float','none','important');
+          c.style.setProperty('width','100%','important');
+        }
         var o=c.querySelector('.owl-stage-outer');
         if(o) o.style.setProperty('height','auto','important');
         var $=window.jQuery, inst=$ && $(c).data('owl.carousel');
@@ -85,6 +97,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       }
     }catch(e){}
   }
-  function go(){ fix(); setTimeout(fix,1500); }
+  var t=null;
+  function go(){ fix(); setTimeout(fix,1500);
+    window.addEventListener('resize',function(){ clearTimeout(t); t=setTimeout(fix,400); });
+  }
   if(document.readyState==='complete') go(); else window.addEventListener('load',go);
 })();
