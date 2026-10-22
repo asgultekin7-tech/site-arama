@@ -12,6 +12,8 @@
      - bb-fav   : Hesabim > Favorilerim
      - bb-bc    : kategori silsilesi + Onceki Sayfaya Don
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
+   Surum    : v2 (performans: daha hafif metin taramasi, erken calistirici
+              DOMContentLoaded'da durur, gereksiz tekrarlar kaldirildi)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -31,7 +33,7 @@
   if(window.MutationObserver){
     obs=new MutationObserver(q);
     obs.observe(document.documentElement,{childList:true,subtree:true});
-    window.addEventListener('load',function(){ tick(); setTimeout(function(){ obs.disconnect(); },2500); });
+    document.addEventListener('DOMContentLoaded',function(){ tick(); obs.disconnect(); });
   }
 })();
 
@@ -43,13 +45,14 @@
   function txt(e){return (e.textContent||'').replace(/\s+/g,' ').trim();}
   function desk(){return window.innerWidth>=992;}
   function leaf(re,scope,needVis){
-    var all=(scope||document.body).querySelectorAll('a,span,div,b,strong,p,li,label,em');
-    for(var i=0;i<all.length;i++){
-      var e=all[i]; if(needVis && (!vis(e)||top(e)>260)) continue;
-      if(!re.test(txt(e))) continue;
-      var deeper=false;
-      for(var j=0;j<e.children.length;j++){ if(re.test(txt(e.children[j]))){deeper=true;break;} }
-      if(!deeper) return e;
+    var root=scope||document.body; if(!root) return null;
+    var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null,false), n;
+    while((n=w.nextNode())){
+      var v=n.nodeValue; if(!v||v.length>80) continue;
+      var s=v.replace(/\s+/g,' ').trim(); if(!s||!re.test(s)) continue;
+      var e=n.parentElement; if(!e||/^(SCRIPT|STYLE|NOSCRIPT)$/.test(e.tagName)) continue;
+      if(needVis && (!vis(e)||top(e)>260)) continue;
+      return e;
     }
     return null;
   }
@@ -153,7 +156,10 @@
       new MutationObserver(function(){ hideCartCount(cart); }).observe(cart,{childList:true,subtree:true,characterData:true});
     }
   }
-  function run(){ if(!document.body) return; try{initSearch();}catch(e){} try{initFav();}catch(e){} try{initAcc();}catch(e){} try{initCart();}catch(e){} }
+  var hdrDone=false;
+  function run(){ if(!document.body||hdrDone) return;
+    if(document.querySelector('.bb-search')&&document.querySelector('.bb-acc')&&document.querySelector('.bb-cart')&&document.querySelector('.bb-fav')){hdrDone=true;return;}
+    try{initSearch();}catch(e){} try{initFav();}catch(e){} try{initAcc();}catch(e){} try{initCart();}catch(e){} }
   (window.bbEarly=window.bbEarly||[]).push(run);
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
   window.addEventListener('load',run);
@@ -680,5 +686,5 @@
   }
   (window.bbEarly=window.bbEarly||[]).push(run);
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
-  window.addEventListener('load',run); setTimeout(run,1200);
+  window.addEventListener('load',function(){ run(); setTimeout(function(){ run(); done=true; },1200); });
 })();
