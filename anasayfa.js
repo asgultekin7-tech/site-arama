@@ -1,10 +1,14 @@
 /* ==============================================================
    benceburada.com.tr - ANASAYFA SCRIPT PAKETI (anasayfa.js)
-   Ne yapar : Turuncu marka/model alanina "Model numarami nerede
-              bulurum?" linkini ekler; tiklayinca 3 supurge tipi
-              cizimli yardim penceresi acilir.
+   Ne yapar :
+     - bbModelYardim: turuncu marka/model alanina "Model numarami
+       nerede bulurum?" linki + cizimli yardim penceresi
+     - bbBannerFit  : kategori banner'larini yanlarindaki urun
+       kartlariyla ayni yukseklige getirir; banner gorseli
+       kirpilmadan orantili kuculur, urunler kalan genisligi alir
+       (sadece masaustu, 992px ve uzeri)
    Nerede   : Script Yonetimi > 2 - Anasayfa (tek <script src>).
-              Urun slider'i esit yukseklik CSS'i yuvada kalir.
+   Surum    : v2 (banner/urun yukseklik esitleme eklendi)
    Kaldirmak: Yuvadaki <script src=".../anasayfa.js"> satirini silmek.
    ============================================================== */
 (function(){
@@ -128,4 +132,54 @@
     return true;
   }
   var n=0,t=setInterval(function(){ if(calis()||++n>30) clearInterval(t); },400);
+})();
+
+/* ===== bbBannerFit: banner yuksekligi = urun karti yuksekligi ===== */
+(function(){
+  if(window.__bbBannerFit) return; window.__bbBannerFit=1;
+  var SEL='section[id^=bannerurunslider]';
+  function set(el,k,v){ el.style.setProperty(k,v,'important'); }
+  function reset(){
+    document.querySelectorAll(SEL).forEach(function(sec){
+      [sec.querySelector('.txrow'),sec.querySelector('.hide-mobile'),sec.querySelector('.hide-mobile .blokResimLink'),sec.querySelector('.anasayfa_urun_slider')].forEach(function(e){
+        if(!e) return; ['flex','flex-wrap','align-items','align-self','width','max-width','min-width','height','padding','overflow'].forEach(function(k){ e.style.removeProperty(k); });
+      });
+    });
+  }
+  function pass(){
+    var changed=false;
+    document.querySelectorAll(SEL).forEach(function(sec){
+      var row=sec.querySelector('.txrow'), col=sec.querySelector('.hide-mobile'), a=col&&col.querySelector('.blokResimLink'), img=a&&a.querySelector('img'), pc=sec.querySelector('.anasayfa_urun_slider');
+      var card=sec.querySelector('.owl-item.active .productItem')||sec.querySelector('.productItem');
+      if(!row||!a||!img||!pc||!card) return;
+      var nw=img.naturalWidth, nh=img.naturalHeight; if(nw<10||nh<10) return;
+      var h=Math.round(card.getBoundingClientRect().height); if(h<100) return;
+      var w=Math.round(h*nw/nh);
+      if(a.__h===h && a.__w===w) return;
+      a.__h=h; a.__w=w; changed=true;
+      set(row,'flex-wrap','nowrap'); set(row,'align-items','flex-start');
+      set(col,'flex','0 0 '+w+'px'); set(col,'width',w+'px'); set(col,'max-width',w+'px'); set(col,'padding','0'); set(col,'align-self','flex-start');
+      set(a,'width',w+'px'); set(a,'height',h+'px');
+      set(pc,'flex','1 1 0'); set(pc,'width','auto'); set(pc,'max-width','none'); set(pc,'min-width','0'); set(pc,'overflow','hidden');
+    });
+    return changed;
+  }
+  var busy=false, pending=false;
+  function fit(){
+    if(busy){ pending=true; return; }
+    if(window.innerWidth<992){ reset(); return; }
+    busy=true; var n=0;
+    (function step(){
+      var ch=pass();
+      if(ch){ window.__bbFitResize=true; window.dispatchEvent(new Event('resize')); window.__bbFitResize=false; }
+      if(ch && ++n<8){ setTimeout(step,450); }
+      else { busy=false; if(pending){ pending=false; setTimeout(fit,150); } }
+    })();
+  }
+  var t=null;
+  window.addEventListener('resize',function(){ if(window.__bbFitResize) return; clearTimeout(t); t=setTimeout(function(){ document.querySelectorAll(SEL+' .blokResimLink').forEach(function(a){ a.__h=a.__w=null; }); fit(); },300); });
+  document.addEventListener('load',function(e){ var el=e.target; if(el && el.tagName==='IMG' && el.closest && el.closest(SEL)){ clearTimeout(t); t=setTimeout(fit,200); } },true);
+  window.addEventListener('load',fit);
+  window.addEventListener('scroll',function(){ clearTimeout(t); t=setTimeout(fit,400); },{passive:true});
+  [800,2000,4000].forEach(function(ms){ setTimeout(fit,ms); });
 })();
