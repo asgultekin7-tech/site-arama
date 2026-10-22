@@ -8,7 +8,8 @@
        kirpilmadan orantili kuculur, urunler kalan genisligi alir
        (sadece masaustu, 992px ve uzeri)
    Nerede   : Script Yonetimi > 2 - Anasayfa (tek <script src>).
-   Surum    : v2 (banner/urun yukseklik esitleme eklendi)
+   Surum    : v3 (banner esitleme: titreme giderildi, her bolum bir kez
+              oturur; sadece pencere genisligi degisince yeniden hesaplar)
    Kaldirmak: Yuvadaki <script src=".../anasayfa.js"> satirini silmek.
    ============================================================== */
 (function(){
@@ -134,52 +135,65 @@
   var n=0,t=setInterval(function(){ if(calis()||++n>30) clearInterval(t); },400);
 })();
 
-/* ===== bbBannerFit: banner yuksekligi = urun karti yuksekligi ===== */
+/* ===== bbBannerFit: banner yuksekligi = urun karti yuksekligi (v3) ===== */
 (function(){
   if(window.__bbBannerFit) return; window.__bbBannerFit=1;
-  var SEL='section[id^=bannerurunslider]';
+  var SEL='section[id^=bannerurunslider]', TOL=4;
   function set(el,k,v){ el.style.setProperty(k,v,'important'); }
+  function parts(sec){
+    var col=sec.querySelector('.hide-mobile'), a=col&&col.querySelector('.blokResimLink');
+    return {row:sec.querySelector('.txrow'), col:col, a:a, img:a&&a.querySelector('img'), pc:sec.querySelector('.anasayfa_urun_slider'),
+            ul:sec.querySelector('.owl-carousel'), card:sec.querySelector('.owl-item.active .productItem')||sec.querySelector('.productItem')};
+  }
   function reset(){
     document.querySelectorAll(SEL).forEach(function(sec){
-      [sec.querySelector('.txrow'),sec.querySelector('.hide-mobile'),sec.querySelector('.hide-mobile .blokResimLink'),sec.querySelector('.anasayfa_urun_slider')].forEach(function(e){
-        if(!e) return; ['flex','flex-wrap','align-items','align-self','width','max-width','min-width','height','padding','overflow'].forEach(function(k){ e.style.removeProperty(k); });
-      });
+      var p=parts(sec); sec.__bbDone=false;
+      [p.row,p.col,p.a,p.pc].forEach(function(e){ if(!e) return; ['flex','flex-wrap','align-items','align-self','width','max-width','min-width','height','padding','overflow'].forEach(function(k){ e.style.removeProperty(k); }); if(e===p.a){ e.__h=e.__w=null; } });
     });
   }
-  function pass(){
-    var changed=false;
-    document.querySelectorAll(SEL).forEach(function(sec){
-      var row=sec.querySelector('.txrow'), col=sec.querySelector('.hide-mobile'), a=col&&col.querySelector('.blokResimLink'), img=a&&a.querySelector('img'), pc=sec.querySelector('.anasayfa_urun_slider');
-      var card=sec.querySelector('.owl-item.active .productItem')||sec.querySelector('.productItem');
-      if(!row||!a||!img||!pc||!card) return;
-      var nw=img.naturalWidth, nh=img.naturalHeight; if(nw<10||nh<10) return;
-      var h=Math.round(card.getBoundingClientRect().height); if(h<100) return;
-      var w=Math.round(h*nw/nh);
-      if(a.__h===h && a.__w===w) return;
-      a.__h=h; a.__w=w; changed=true;
-      set(row,'flex-wrap','nowrap'); set(row,'align-items','flex-start');
-      set(col,'flex','0 0 '+w+'px'); set(col,'width',w+'px'); set(col,'max-width',w+'px'); set(col,'padding','0'); set(col,'align-self','flex-start');
-      set(a,'width',w+'px'); set(a,'height',h+'px');
-      set(pc,'flex','1 1 0'); set(pc,'width','auto'); set(pc,'max-width','none'); set(pc,'min-width','0'); set(pc,'overflow','hidden');
-    });
-    return changed;
+  function refreshOwl(p){
+    try{ if(window.jQuery && p.ul) window.jQuery(p.ul).trigger('refresh.owl.carousel'); }catch(e){}
   }
-  var busy=false, pending=false;
-  function fit(){
-    if(busy){ pending=true; return; }
-    if(window.innerWidth<992){ reset(); return; }
-    busy=true; var n=0;
-    (function step(){
-      var ch=pass();
-      if(ch){ window.__bbFitResize=true; window.dispatchEvent(new Event('resize')); window.__bbFitResize=false; }
-      if(ch && ++n<8){ setTimeout(step,450); }
-      else { busy=false; if(pending){ pending=false; setTimeout(fit,150); } }
+  /* tek bolum icin bir adim; true = hala degisiyor */
+  function step(sec){
+    var p=parts(sec);
+    if(!p.row||!p.a||!p.img||!p.pc||!p.card) return false;
+    var nw=p.img.naturalWidth, nh=p.img.naturalHeight; if(nw<10||nh<10) return false;
+    var h=Math.round(p.card.getBoundingClientRect().height); if(h<100) return false;
+    if(p.a.__h && Math.abs(h-p.a.__h)<=TOL){ sec.__bbDone=true; return false; }
+    var w=Math.round(h*nw/nh);
+    p.a.__h=h; p.a.__w=w;
+    set(p.row,'flex-wrap','nowrap'); set(p.row,'align-items','flex-start');
+    set(p.col,'flex','0 0 '+w+'px'); set(p.col,'width',w+'px'); set(p.col,'max-width',w+'px'); set(p.col,'padding','0'); set(p.col,'align-self','flex-start');
+    set(p.a,'width',w+'px'); set(p.a,'height',h+'px');
+    set(p.pc,'flex','1 1 0'); set(p.pc,'width','auto'); set(p.pc,'max-width','none'); set(p.pc,'min-width','0'); set(p.pc,'overflow','hidden');
+    refreshOwl(p);
+    return true;
+  }
+  function fitSec(sec){
+    if(sec.__bbBusy || sec.__bbDone) return;
+    sec.__bbBusy=true; var n=0;
+    (function go(){
+      var ch=step(sec);
+      if(ch && ++n<6){ setTimeout(go,350); }
+      else { sec.__bbBusy=false; if(n>=6) sec.__bbDone=true; }
     })();
   }
-  var t=null;
-  window.addEventListener('resize',function(){ if(window.__bbFitResize) return; clearTimeout(t); t=setTimeout(function(){ document.querySelectorAll(SEL+' .blokResimLink').forEach(function(a){ a.__h=a.__w=null; }); fit(); },300); });
-  document.addEventListener('load',function(e){ var el=e.target; if(el && el.tagName==='IMG' && el.closest && el.closest(SEL)){ clearTimeout(t); t=setTimeout(fit,200); } },true);
-  window.addEventListener('load',fit);
-  window.addEventListener('scroll',function(){ clearTimeout(t); t=setTimeout(fit,400); },{passive:true});
-  [800,2000,4000].forEach(function(ms){ setTimeout(fit,ms); });
+  function fitAll(){
+    if(window.innerWidth<992){ reset(); return; }
+    document.querySelectorAll(SEL).forEach(fitSec);
+  }
+  var lastW=window.innerWidth, t=null;
+  window.addEventListener('resize',function(){
+    if(Math.abs(window.innerWidth-lastW)<2) return; lastW=window.innerWidth;
+    clearTimeout(t); t=setTimeout(function(){ reset(); fitAll(); },300);
+  });
+  document.addEventListener('load',function(e){
+    var el=e.target; if(!el||el.tagName!=='IMG'||!el.closest) return;
+    var sec=el.closest(SEL); if(!sec) return;
+    if(el.closest('.blokResimLink')){ sec.__bbDone=false; }
+    setTimeout(function(){ if(window.innerWidth>=992) fitSec(sec); },150);
+  },true);
+  window.addEventListener('load',fitAll);
+  [800,2500].forEach(function(ms){ setTimeout(fitAll,ms); });
 })();
