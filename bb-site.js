@@ -12,8 +12,8 @@
      - bb-fav   : Hesabim > Favorilerim
      - bb-bc    : kategori silsilesi + Onceki Sayfaya Don
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v2 (performans: daha hafif metin taramasi, erken calistirici
-              DOMContentLoaded'da durur, gereksiz tekrarlar kaldirildi)
+   Surum    : v3 (v2 performans + Hesabim menusu ve favori sayaci
+              gec yuklendiginde de yakalanir)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -51,7 +51,7 @@
       var v=n.nodeValue; if(!v||v.length>80) continue;
       var s=v.replace(/\s+/g,' ').trim(); if(!s||!re.test(s)) continue;
       var e=n.parentElement; if(!e||/^(SCRIPT|STYLE|NOSCRIPT)$/.test(e.tagName)) continue;
-      if(needVis && (!vis(e)||top(e)>260)) continue;
+      if(needVis){ if(!vis(e)||top(e)>260) continue; var rr=e.getBoundingClientRect(); if(rr.left<-5||rr.right>window.innerWidth+5) continue; }
       return e;
     }
     return null;
@@ -86,7 +86,8 @@
     q.setAttribute('placeholder','Marka, model veya parça ara…');
   }
   function initFav(){
-    if(document.querySelector('.bb-fav')) return;
+    var f0=document.querySelector('.bb-fav');
+    if(f0){ if(!document.querySelector('.bb-cnt')){ if(!tagCount(f0) && f0.parentElement && f0.parentElement.children.length<=3){ f0.parentElement.classList.add('bb-favwrap'); tagCount(f0.parentElement); } } return; }
     var a=document.querySelectorAll('a[href*="Favorilerim"]'), fav=null;
     for(var i=0;i<a.length;i++){ if(vis(a[i]) && top(a[i])<260){fav=a[i];break;} }
     if(!fav) return;
@@ -96,11 +97,14 @@
     }
   }
   function initAcc(){
-    if(document.querySelector('.bb-acc')) return;
-    var lab=leaf(/^(Hesabım|Üye Girişi|Giriş Yap)$/i,document.body,true);
-    if(!lab) return;
-    var btn=lab.closest('a')||lab.parentElement;
-    btn.classList.add('bb-acc');
+    if(document.querySelector('.bb-accmenu')) return;
+    var btn=document.querySelector('.bb-acc');
+    if(!btn){
+      var lab=leaf(/^(Hesabım|Üye Girişi|Giriş Yap)$/i,document.body,true);
+      if(!lab) return;
+      btn=lab.closest('a')||lab.parentElement;
+      btn.classList.add('bb-acc');
+    }
     var menuRe=/^(Siparişlerim|Üye Ol|Çıkış Yap|Üyelik Bilgilerim|Adres Defterim)$/i;
     var root=btn.parentElement, link=null;
     for(var lv=0; lv<6 && root; lv++){
@@ -158,12 +162,12 @@
   }
   var hdrDone=false;
   function run(){ if(!document.body||hdrDone) return;
-    if(document.querySelector('.bb-search')&&document.querySelector('.bb-acc')&&document.querySelector('.bb-cart')&&document.querySelector('.bb-fav')){hdrDone=true;return;}
+    if(document.querySelector('.bb-search')&&document.querySelector('.bb-accmenu')&&document.querySelector('.bb-cart')&&document.querySelector('.bb-fav')&&document.querySelector('.bb-cnt')){hdrDone=true;return;}
     try{initSearch();}catch(e){} try{initFav();}catch(e){} try{initAcc();}catch(e){} try{initCart();}catch(e){} }
   (window.bbEarly=window.bbEarly||[]).push(run);
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
   window.addEventListener('load',run);
-  setTimeout(run,800); setTimeout(run,2000);
+  setTimeout(run,800); setTimeout(run,2000); setTimeout(run,4000);
 })();
 
 /* ===== bb-sg: arama öneri penceresi ===== */
