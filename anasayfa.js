@@ -8,8 +8,9 @@
        kirpilmadan orantili kuculur, urunler kalan genisligi alir
        (sadece masaustu, 992px ve uzeri)
    Nerede   : Script Yonetimi > 2 - Anasayfa (tek <script src>).
-   Surum    : v3 (banner esitleme: titreme giderildi, her bolum bir kez
-              oturur; sadece pencere genisligi degisince yeniden hesaplar)
+     - bbOwlEsitle  : masaustunde tum banner-urun bloklari ayni sayida
+       urun gosterir (az olanlar en coga esitlenir)
+   Surum    : v4 (v3 titreme duzeltmesi + blok urun sayisi esitleme)
    Kaldirmak: Yuvadaki <script src=".../anasayfa.js"> satirini silmek.
    ============================================================== */
 (function(){
@@ -194,6 +195,37 @@
     if(el.closest('.blokResimLink')){ sec.__bbDone=false; }
     setTimeout(function(){ if(window.innerWidth>=992) fitSec(sec); },150);
   },true);
+  window.__bbFitAll=fitAll;
   window.addEventListener('load',fitAll);
   [800,2500].forEach(function(ms){ setTimeout(fitAll,ms); });
+})();
+
+/* ===== bbOwlEsitle: masaustunde tum banner-urun bloklari ayni urun sayisini gostersin ===== */
+(function(){
+  if(window.__bbOwlEsit) return; window.__bbOwlEsit=1;
+  var tries=0;
+  function run(){
+    if(!window.jQuery){ if(++tries<20) setTimeout(run,300); return; }
+    var secs=[].slice.call(document.querySelectorAll('section[id^=bannerurunslider]')), data=[], max=0, ready=true;
+    secs.forEach(function(s){
+      var ul=s.querySelector('.owl-carousel'), d=ul&&window.jQuery(ul).data('owl.carousel');
+      if(!d){ ready=false; return; }
+      var r=d.options.responsive||{}, keys=Object.keys(r).map(Number).sort(function(a,b){return b-a;}), k=keys[0];
+      if(k==null||!r[k]) return;
+      var it=r[k].items||0; if(it>max) max=it;
+      data.push({ul:ul,d:d,k:k,it:it,s:s});
+    });
+    if(!ready && ++tries<20){ setTimeout(run,300); return; }
+    var changed=false;
+    data.forEach(function(x){
+      if(x.it<max){
+        x.d.options.responsive[x.k].items=max;
+        window.jQuery(x.ul).trigger('refresh.owl.carousel');
+        x.s.__bbDone=false; var a=x.s.querySelector('.blokResimLink'); if(a) a.__h=null;
+        changed=true;
+      }
+    });
+    if(changed) setTimeout(function(){ if(window.__bbFitAll) window.__bbFitAll(); },500);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){ setTimeout(run,300); }); else setTimeout(run,300);
 })();
