@@ -17,6 +17,36 @@
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
    ============================================================== */
+
+/* ===== bb-pdgizle: urun sayfasinda asil tasarim kurulana kadar ham gorunumu gizler =====
+   Ticimax urun sayfasini once sade bir on surumle gonderiyor (Azalt/Artir, gorselsiz),
+   sonra sablon ve tasarim kodlari asil gorunumu kuruyor. Bu blok yalnizca urun
+   sayfalarinda (body.ProductBody) icerik alanini galeri + puan kutusu gelene kadar
+   gorunmez tutar; en fazla 2,5 sn bekler, sonra her durumda gosterir. */
+(function(){
+  if(window.__bbpdg) return; window.__bbpdg=1;
+  var d=document.documentElement;
+  var st=document.createElement('style'); st.id='bb-pdgizle';
+  st.textContent='body.ProductBody #divIcerik.productDetailContainer{opacity:0}'+
+    'html.bbpd-ok body.ProductBody #divIcerik.productDetailContainer{opacity:1;transition:opacity .15s ease}';
+  (document.head||d).appendChild(st);
+  function ok(){ if(!d.classList.contains('bbpd-ok')) d.classList.add('bbpd-ok'); }
+  var t0=Date.now(), sw=0;
+  (function chk(){
+    var b=document.body;
+    if(b && !b.classList.contains('ProductBody') && document.readyState!=='loading'){ ok(); return; }
+    var c=document.getElementById('divIcerik');
+    if(c){
+      var g=c.querySelector('.swiper-initialized,.swiper-container-initialized'), p=c.querySelector('.bbPuan');
+      if(g && !sw) sw=Date.now();
+      if(g && (p || Date.now()-sw>400)){ setTimeout(ok,60); return; }
+    }
+    if(Date.now()-t0>2500){ ok(); return; }
+    setTimeout(chk,40);
+  })();
+  window.addEventListener('load',function(){ setTimeout(ok,500); });
+})();
+
 (function(){
   if(document.getElementById('bb-site-css')) return;
   var s=document.createElement('style'); s.id='bb-site-css';
