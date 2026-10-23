@@ -1,16 +1,18 @@
 /* ==============================================================
    benceburada.com.tr - ANASAYFA SCRIPT PAKETI (anasayfa.js)
    Ne yapar :
-     - bbModelYardim: turuncu marka/model alanina "Model numarami
+     - bbModelYardim : turuncu marka/model alanina "Model numarami
        nerede bulurum?" linki + cizimli yardim penceresi
-     - bbBannerFit  : kategori banner'larini yanlarindaki urun
-       kartlariyla ayni yukseklige getirir; banner gorseli
-       kirpilmadan orantili kuculur, urunler kalan genisligi alir
-       (sadece masaustu, 992px ve uzeri)
+     - bbKategoriKart: urunlu "Banner ve Urun Slider" bloklarinin
+       yerine yalnizca kategori gorsellerini tek satirda gosterir
+       (masaustu 4'lu, tablet 3'lu, mobil 2'li). Bloklarda urun olsa
+       da olmasa da calisir; bloklar gizlenir, gorsel + link kalir.
+     - bbSliderBoy   : genis ekranda ana slider'in yuksekligini soldaki
+       kategori menusunun yuksekligine esitler (gorsel ortalanip
+       kirpilir, menu kuculmez). Dar ekranda dokunmaz.
    Nerede   : Script Yonetimi > 2 - Anasayfa (tek <script src>).
-     - bbOwlEsitle  : masaustunde tum banner-urun bloklari ayni sayida
-       urun gosterir (az olanlar en coga esitlenir)
-   Surum    : v4 (v3 titreme duzeltmesi + blok urun sayisi esitleme)
+   Surum    : v5 (v4'teki bbBannerFit ve bbOwlEsitle kaldirildi;
+              urun slider'lari ana sayfadan kalktigi icin gereksiz)
    Kaldirmak: Yuvadaki <script src=".../anasayfa.js"> satirini silmek.
    ============================================================== */
 (function(){
@@ -136,96 +138,72 @@
   var n=0,t=setInterval(function(){ if(calis()||++n>30) clearInterval(t); },400);
 })();
 
-/* ===== bbBannerFit: banner yuksekligi = urun karti yuksekligi (v3) ===== */
+/* ===== bbKategoriKart: urunlu bloklar yerine kategori gorselleri ===== */
 (function(){
-  if(window.__bbBannerFit) return; window.__bbBannerFit=1;
-  var SEL='section[id^=bannerurunslider]', TOL=4;
-  function set(el,k,v){ el.style.setProperty(k,v,'important'); }
-  function parts(sec){
-    var col=sec.querySelector('.hide-mobile'), a=col&&col.querySelector('.blokResimLink');
-    return {row:sec.querySelector('.txrow'), col:col, a:a, img:a&&a.querySelector('img'), pc:sec.querySelector('.anasayfa_urun_slider'),
-            ul:sec.querySelector('.owl-carousel'), card:sec.querySelector('.owl-item.active .productItem')||sec.querySelector('.productItem')};
+  if(window.__bbKatKart) return; window.__bbKatKart=1;
+  var SEL='section[id^=bannerurunslider]';
+  var css=document.createElement('style'); css.id='bb-katkart-css';
+  css.textContent=SEL+'{display:none!important}'+
+    '.bb-katgrid-wrap{margin-top:20px;margin-bottom:10px}'+
+    '.bb-katgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}'+
+    '.bb-katgrid a{display:block;border-radius:10px;overflow:hidden;background:#f4f5f7;transition:transform .15s ease,box-shadow .15s ease}'+
+    '.bb-katgrid a:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.12)}'+
+    '.bb-katgrid img{display:block;width:100%;height:auto;aspect-ratio:var(--bbar,237/330);object-fit:cover}'+
+    '@media (max-width:991px){.bb-katgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}}'+
+    '@media (max-width:575px){.bb-katgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}';
+  (document.head||document.documentElement).appendChild(css);
+  function realSrc(img){
+    var c=[img.getAttribute('data-src'),img.getAttribute('data-original'),img.getAttribute('data-lazy'),img.getAttribute('src')];
+    for(var i=0;i<c.length;i++){ var s=c[i]; if(s && !/blank\.(png|gif)|data:image/i.test(s)) return s; }
+    return img.currentSrc||img.src;
   }
-  function reset(){
-    document.querySelectorAll(SEL).forEach(function(sec){
-      var p=parts(sec); sec.__bbDone=false;
-      [p.row,p.col,p.a,p.pc].forEach(function(e){ if(!e) return; ['flex','flex-wrap','align-items','align-self','width','max-width','min-width','height','padding','overflow'].forEach(function(k){ e.style.removeProperty(k); }); if(e===p.a){ e.__h=e.__w=null; } });
+  function build(){
+    if(document.querySelector('.bb-katgrid')) return true;
+    var secs=[].slice.call(document.querySelectorAll(SEL)); if(!secs.length) return false;
+    var items=[];
+    secs.forEach(function(s){
+      var a=s.querySelector('.blokResimLink')||s.querySelector('a[href] img')&&s.querySelector('a[href] img').closest('a');
+      var img=a&&a.querySelector('img'); if(!a||!img) return;
+      items.push({href:a.getAttribute('href')||'#',src:realSrc(img),alt:img.getAttribute('alt')||'',title:a.getAttribute('title')||''});
     });
-  }
-  function refreshOwl(p){
-    try{ if(window.jQuery && p.ul) window.jQuery(p.ul).trigger('refresh.owl.carousel'); }catch(e){}
-  }
-  /* tek bolum icin bir adim; true = hala degisiyor */
-  function step(sec){
-    var p=parts(sec);
-    if(!p.row||!p.a||!p.img||!p.pc||!p.card) return false;
-    var nw=p.img.naturalWidth, nh=p.img.naturalHeight; if(nw<10||nh<10) return false;
-    var h=Math.round(p.card.getBoundingClientRect().height); if(h<100) return false;
-    if(p.a.__h && Math.abs(h-p.a.__h)<=TOL){ sec.__bbDone=true; return false; }
-    var w=Math.round(h*nw/nh);
-    p.a.__h=h; p.a.__w=w;
-    set(p.row,'flex-wrap','nowrap'); set(p.row,'align-items','flex-start');
-    set(p.col,'flex','0 0 '+w+'px'); set(p.col,'width',w+'px'); set(p.col,'max-width',w+'px'); set(p.col,'padding','0'); set(p.col,'align-self','flex-start');
-    set(p.a,'width',w+'px'); set(p.a,'height',h+'px');
-    set(p.pc,'flex','1 1 0'); set(p.pc,'width','auto'); set(p.pc,'max-width','none'); set(p.pc,'min-width','0'); set(p.pc,'overflow','hidden');
-    refreshOwl(p);
+    if(!items.length) return false;
+    var cont=secs[0].querySelector('.ticiContainer'), wrap=document.createElement('section');
+    wrap.className='landing-block bb-katgrid-wrap';
+    var inner=document.createElement('div'); inner.className=cont?cont.className:'ticiContainer';
+    var grid=document.createElement('div'); grid.className='bb-katgrid';
+    items.forEach(function(it){
+      var a=document.createElement('a'); a.href=it.href; if(it.title) a.title=it.title;
+      var im=document.createElement('img'); im.src=it.src; im.alt=it.alt||it.title||'Kategori'; im.loading='lazy'; im.decoding='async';
+      im.onload=function(){ if(im.naturalWidth&&im.naturalHeight) grid.style.setProperty('--bbar',im.naturalWidth+'/'+im.naturalHeight); };
+      a.appendChild(im); grid.appendChild(a);
+    });
+    inner.appendChild(grid); wrap.appendChild(inner);
+    secs[0].parentNode.insertBefore(wrap,secs[0]);
     return true;
   }
-  function fitSec(sec){
-    if(sec.__bbBusy || sec.__bbDone) return;
-    sec.__bbBusy=true; var n=0;
-    (function go(){
-      var ch=step(sec);
-      if(ch && ++n<6){ setTimeout(go,350); }
-      else { sec.__bbBusy=false; if(n>=6) sec.__bbDone=true; }
-    })();
-  }
-  function fitAll(){
-    if(window.innerWidth<992){ reset(); return; }
-    document.querySelectorAll(SEL).forEach(fitSec);
-  }
-  var lastW=window.innerWidth, t=null;
-  window.addEventListener('resize',function(){
-    if(Math.abs(window.innerWidth-lastW)<2) return; lastW=window.innerWidth;
-    clearTimeout(t); t=setTimeout(function(){ reset(); fitAll(); },300);
-  });
-  document.addEventListener('load',function(e){
-    var el=e.target; if(!el||el.tagName!=='IMG'||!el.closest) return;
-    var sec=el.closest(SEL); if(!sec) return;
-    if(el.closest('.blokResimLink')){ sec.__bbDone=false; }
-    setTimeout(function(){ if(window.innerWidth>=992) fitSec(sec); },150);
-  },true);
-  window.__bbFitAll=fitAll;
-  window.addEventListener('load',fitAll);
-  [800,2500].forEach(function(ms){ setTimeout(fitAll,ms); });
+  var n=0;(function go(){ if(build()||++n>40) return; setTimeout(go,250); })();
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',build);
 })();
 
-/* ===== bbOwlEsitle: masaustunde tum banner-urun bloklari ayni urun sayisini gostersin ===== */
+/* ===== bbSliderBoy: ana slider yuksekligi = kategori menusu yuksekligi ===== */
 (function(){
-  if(window.__bbOwlEsit) return; window.__bbOwlEsit=1;
-  var tries=0;
-  function run(){
-    if(!window.jQuery){ if(++tries<20) setTimeout(run,300); return; }
-    var secs=[].slice.call(document.querySelectorAll('section[id^=bannerurunslider]')), data=[], max=0, ready=true;
-    secs.forEach(function(s){
-      var ul=s.querySelector('.owl-carousel'), d=ul&&window.jQuery(ul).data('owl.carousel');
-      if(!d){ ready=false; return; }
-      var r=d.options.responsive||{}, keys=Object.keys(r).map(Number).sort(function(a,b){return b-a;}), k=keys[0];
-      if(k==null||!r[k]) return;
-      var it=r[k].items||0; if(it>max) max=it;
-      data.push({ul:ul,d:d,k:k,it:it,s:s});
-    });
-    if(!ready && ++tries<20){ setTimeout(run,300); return; }
-    var changed=false;
-    data.forEach(function(x){
-      if(x.it<max){
-        x.d.options.responsive[x.k].items=max;
-        window.jQuery(x.ul).trigger('refresh.owl.carousel');
-        x.s.__bbDone=false; var a=x.s.querySelector('.blokResimLink'); if(a) a.__h=null;
-        changed=true;
-      }
-    });
-    if(changed) setTimeout(function(){ if(window.__bbFitAll) window.__bbFitAll(); },500);
+  if(window.__bbSliderBoy) return; window.__bbSliderBoy=1;
+  var st=document.createElement('style'); st.id='bb-sliderboy-css';
+  (document.head||document.documentElement).appendChild(st);
+  function fit(){
+    var c=document.querySelector('.anasayfa_tek_slider'); if(!c){ st.textContent=''; return; }
+    var col=c.parentElement, nav=col&&col.querySelector('.newHeaderNavigation');
+    var wide=window.innerWidth>=992 && nav && getComputedStyle(nav).display!=='none';
+    var nw=wide?nav.getBoundingClientRect().width:0, cw=col?col.clientWidth:0;
+    if(!wide || nw<=0 || nw>=cw*0.5){ st.textContent=''; return; }
+    var h=Math.round(nav.getBoundingClientRect().height);
+    if(h<200){ st.textContent=''; return; }
+    st.textContent='.anasayfa_tek_slider .owl-stage-outer{max-height:'+h+'px!important;border-radius:10px}'+
+      '.anasayfa_tek_slider .owl-item img{height:'+h+'px!important;width:100%!important;object-fit:cover!important;object-position:center center!important}';
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){ setTimeout(run,300); }); else setTimeout(run,300);
+  var t=null; function later(){ clearTimeout(t); t=setTimeout(fit,150); }
+  window.addEventListener('resize',later);
+  window.addEventListener('load',function(){ fit(); setTimeout(fit,800); setTimeout(fit,2000); });
+  if(document.readyState!=='loading') fit(); else document.addEventListener('DOMContentLoaded',fit);
+  var k=0,iv=setInterval(function(){ fit(); if(++k>12) clearInterval(iv); },500);
 })();
