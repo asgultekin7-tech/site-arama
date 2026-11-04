@@ -14,7 +14,9 @@
      - bb-mob   : mobil duzeltmeler (urun gorseli, Sepete Ekle satiri,
                   kategori/arama siralama paneli)
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v5 (v4 + bb-mob: mobil gorsel / Sepete Ekle / siralama paneli duzeltmesi)
+   Surum    : v6 (bb-mob duzeltildi: gorsel 320px kesimi ve 64vw siniri kalkti,
+              gorseldeki beyaz bosluga gore yakinlastirma, Sepete Ekle
+              butonu artik kalan genisligin tamamini kapliyor)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -726,9 +728,11 @@
 
 /* ===== bb-mob: mobil duzeltmeler (urun gorseli, Sepete Ekle satiri, siralama paneli) =====
    Ne yapar : Yalnizca 991px ve alti ekranlarda (telefon / tablet):
-     1) Urun sayfasi: ana gorsel alanini buyutur, gorsel kutuyu doldurur.
-     2) Urun sayfasi: adet kutusu + favori + Sepete Ekle ayni hizada, ayni
-        yukseklikte (52px) tek satir olur; butonun kaymasi/oynamasi durur.
+     1) Urun sayfasi: ana gorsel alanini buyutur (Ticimax'in 64vw siniri kalkar).
+        Fotograf dosyasindaki beyaz boslugu olcup urunu kutuya sigacak
+        kadar yakinlastirir (en fazla 2,2 kat).
+     2) Urun sayfasi: adet kutusu (132px) + favori + Sepete Ekle ayni hizada,
+        ayni yukseklikte (54px); buton kalan genisligin tamamini kaplar.
      3) Kategori ve arama sayfalari: turuncu siralama paneli kapali baslar.
         SIRALAMA'ya basinca urunlerin USTUNE binmeden araya acilir,
         tekrar basinca kapanir.
@@ -739,18 +743,20 @@
   if(window.__bbmob) return; window.__bbmob=1;
   var MQ='(max-width:991px)';
   var css='@media '+MQ+'{'+
-    /* 1) urun gorseli */
-    '.bbpd-gal .swiper-slide{display:flex!important;align-items:center!important;justify-content:center!important;height:min(90vw,440px)!important}'+
-    '.bbpd-gal .swiper-slide>a,.bbpd-gal .swiper-slide>div{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;height:100%!important}'+
-    '.bbpd-gal .swiper-slide img{width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important}'+
-    /* 2) Sepete Ekle satiri */
+    /* 1) urun gorseli: kutu buyur, Ticimax'in 64vw siniri kalkar */
+    '.bbpd-gal,.bbpd-gal .swiper-wrapper,.bbpd-gal .swiper-slide{height:min(95vw,460px)!important}'+
+    '.bbpd-gal .swiper-slide{display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}'+
+    '.bbpd-gal .swiper-slide figure{width:100%!important;height:100%!important;margin:0!important;display:flex!important;align-items:center!important;justify-content:center!important}'+
+    '.bbpd-galp{height:auto!important;min-height:0!important;max-height:none!important}'+
+    'html body .TopDet .bbpd-gal .fullSliderFigure img,html body .bbpd-gal .swiper-slide img{height:100%!important;width:auto!important;max-height:none!important;max-width:100%!important;object-fit:contain!important}'+
+    /* 2) Sepete Ekle satiri: adet 132px, kalp 54px, buton kalan alan */
     '.bbpd-row{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:nowrap!important;width:100%!important;float:none!important;height:auto!important}'+
-    '.bbpd-row>*{float:none!important;margin:0!important;max-width:none!important}'+
-    '.bbpd-row>.bbpd-q,.bbpd-row>.bbpd-f{flex:0 0 auto!important;width:auto!important}'+
-    '.bbpd-row>.bbpd-b{flex:1 1 auto!important;width:auto!important;min-width:0!important;display:flex!important;align-items:center!important;gap:10px!important}'+
-    '.bbpd-qbox{height:52px!important;min-height:52px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;margin:0!important}'+
-    '.bbpd-fv{width:52px!important;height:52px!important;min-width:52px!important;flex:0 0 52px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important}'+
-    '.bbpd-sb{flex:1 1 auto!important;width:100%!important;height:52px!important;min-height:52px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important;padding:0 12px!important;line-height:1!important;white-space:nowrap!important;position:relative!important;top:auto!important;transform:none!important}'+
+    '.bbpd-row>*{float:none!important;margin:0!important}'+
+    '.bbpd-row>.bbpd-qbox{flex:0 0 132px!important;width:132px!important;max-width:132px!important;height:54px!important;min-height:54px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important}'+
+    '.bbpd-qbox>span{width:100%!important;height:54px!important}'+
+    '.bbpd-qbox input{width:auto!important;min-width:0!important;flex:1 1 auto!important;height:52px!important}'+
+    '.bbpd-row>.bbpd-b{flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;display:flex!important;align-items:center!important}'+
+    '.bbpd-row .bbpd-sb{flex:1 1 auto!important;width:100%!important;height:54px!important;min-height:54px!important;box-sizing:border-box!important;margin:0!important;padding:0 12px!important;white-space:nowrap!important;position:relative!important;top:auto!important;transform:none!important}'+
     /* 3) siralama paneli */
     'html:not(.bb-sorton) .bb-sortp:not(.bb-sortst){display:none!important}'+
     'html.bb-sorton .bb-sortpar{flex-wrap:wrap!important}'+
@@ -765,18 +771,60 @@
   function isPD(){return document.body && document.body.classList.contains('ProductBody');}
   var QI='input[type=text],input[type=number],input[type=tel],input:not([type])';
 
-  /* 1) ana gorseli isaretle */
+  /* 1) ana gorseli isaretle + gorseldeki beyaz bosluga gore yakinlastir */
+  function fitImg(im){
+    if(!im || im.__bbfit===im.currentSrc || !im.naturalWidth || im.naturalWidth<20) return;
+    im.__bbfit=im.currentSrc;
+    var i2=new Image(); i2.crossOrigin='anonymous';
+    i2.onload=function(){
+      try{
+        var W=i2.naturalWidth,H=i2.naturalHeight,s=Math.max(1,Math.round(Math.max(W,H)/300));
+        var cw=Math.ceil(W/s),ch=Math.ceil(H/s),c=document.createElement('canvas'); c.width=cw; c.height=ch;
+        var x=c.getContext('2d'); x.drawImage(i2,0,0,cw,ch);
+        var d=x.getImageData(0,0,cw,ch).data,x0=cw,y0=ch,x1=-1,y1=-1;
+        for(var y=0;y<ch;y++) for(var xx=0;xx<cw;xx++){
+          var k=(y*cw+xx)*4; if(d[k+3]>20 && (d[k]<235||d[k+1]<235||d[k+2]<235)){ if(xx<x0)x0=xx; if(xx>x1)x1=xx; if(y<y0)y0=y; if(y>y1)y1=y; }
+        }
+        if(x1<0) return;
+        im.__bbbox={fx:(x1-x0+1)/cw,fy:(y1-y0+1)/ch,cx:(x0+x1+1)/2/cw,cy:(y0+y1+1)/2/ch,r:W/H};
+        zoomImg(im);
+      }catch(e){}
+    };
+    i2.src=im.currentSrc||im.src;
+  }
+  function zoomImg(im){
+    var b=im.__bbbox, sl=im.closest('.swiper-slide'); if(!b||!sl) return;
+    im.style.removeProperty('transform');
+    if(!mob()) return;
+    var bw=sl.clientWidth, bh=sl.clientHeight, ew=im.clientWidth, eh=im.clientHeight; if(!bw||!bh||!ew||!eh) return;
+    var rw=ew, rh=ew/b.r; if(rh>eh){ rh=eh; rw=eh*b.r; }          /* object-fit:contain ile cizilen alan */
+    var k=Math.min(bw*0.94/(b.fx*rw), bh*0.94/(b.fy*rh), 2.2);
+    if(k<1.06) return;
+    var ox=(b.cx-0.5)*rw, oy=(b.cy-0.5)*rh;
+    im.style.setProperty('transform','translate('+(-ox*k).toFixed(1)+'px,'+(-oy*k).toFixed(1)+'px) scale('+k.toFixed(3)+')','important');
+    im.style.setProperty('transform-origin','50% 50%','important');
+  }
   function gal(){
     if(!isPD()) return;
-    var r=document.getElementById('divIcerik'); if(!r||r.querySelector('.bbpd-gal')) return;
-    var sw=r.querySelectorAll('.swiper-initialized,.swiper-container-initialized');
-    for(var i=0;i<sw.length;i++){
-      var s=sw[i];
-      if(!s.querySelector('.swiper-slide img')) continue;
-      if(/TL|Sepete/i.test(txt(s))) continue;          /* benzer urun slider'i degil */
-      if(s.getBoundingClientRect().width<150) continue; /* kucuk resim seridi degil */
-      s.classList.add('bbpd-gal'); return;
+    var r=document.getElementById('divIcerik'); if(!r) return;
+    var g=r.querySelector('.bbpd-gal');
+    if(!g){
+      var sw=r.querySelectorAll('.swiper-initialized,.swiper-container-initialized');
+      for(var i=0;i<sw.length;i++){
+        var s=sw[i];
+        if(!s.querySelector('.swiper-slide img')) continue;
+        if(/TL|Sepete/i.test(txt(s))) continue;          /* benzer urun slider'i degil */
+        if(s.getBoundingClientRect().width<150) continue; /* kucuk resim seridi degil */
+        g=s; g.classList.add('bbpd-gal');
+        /* gorseli 320px'de kesen sabit yukseklikli ust kutular serbest birakilir */
+        for(var p=g.parentElement,k=0;k<5&&p&&!p.classList.contains('TopDet')&&p!==r;k++,p=p.parentElement) p.classList.add('bbpd-galp');
+        g.addEventListener('load',function(e){ if(e.target.tagName==='IMG') fitImg(e.target); },true);
+        break;
+      }
+      if(!g) return;
     }
+    try{ if(g.swiper) g.swiper.update(); }catch(e){}
+    [].forEach.call(g.querySelectorAll('.swiper-slide img'),function(im){ if(im.complete) fitImg(im); });
   }
 
   /* 2) Sepete Ekle satirini isaretle */
@@ -860,5 +908,5 @@
       setTimeout(function(){ o.disconnect(); },20000);
     }
   });
-  window.addEventListener('resize',later);
+  window.addEventListener('resize',function(){ later(); [].forEach.call(document.querySelectorAll('.bbpd-gal .swiper-slide img'),zoomImg); });
 })();
