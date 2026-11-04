@@ -14,9 +14,8 @@
      - bb-mob   : mobil duzeltmeler (urun gorseli, Sepete Ekle satiri,
                   kategori/arama siralama paneli)
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v6 (bb-mob duzeltildi: gorsel 320px kesimi ve 64vw siniri kalkti,
-              gorseldeki beyaz bosluga gore yakinlastirma, Sepete Ekle
-              butonu artik kalan genisligin tamamini kapliyor)
+   Surum    : v7 (v6 + Sepete Ekle butonunda sepet ikonu yazinin
+              yanina ortalandi; her ekran genisliginde hizali)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -732,7 +731,8 @@
         Fotograf dosyasindaki beyaz boslugu olcup urunu kutuya sigacak
         kadar yakinlastirir (en fazla 2,2 kat).
      2) Urun sayfasi: adet kutusu (132px) + favori + Sepete Ekle ayni hizada,
-        ayni yukseklikte (54px); buton kalan genisligin tamamini kaplar.
+        ayni yukseklikte (54px); buton kalan genisligin tamamini kaplar,
+        sepet ikonu yazinin hemen solunda ortalanir.
      3) Kategori ve arama sayfalari: turuncu siralama paneli kapali baslar.
         SIRALAMA'ya basinca urunlerin USTUNE binmeden araya acilir,
         tekrar basinca kapanir.
@@ -756,7 +756,7 @@
     '.bbpd-qbox>span{width:100%!important;height:54px!important}'+
     '.bbpd-qbox input{width:auto!important;min-width:0!important;flex:1 1 auto!important;height:52px!important}'+
     '.bbpd-row>.bbpd-b{flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;display:flex!important;align-items:center!important}'+
-    '.bbpd-row .bbpd-sb{flex:1 1 auto!important;width:100%!important;height:54px!important;min-height:54px!important;box-sizing:border-box!important;margin:0!important;padding:0 12px!important;white-space:nowrap!important;position:relative!important;top:auto!important;transform:none!important}'+
+    '.bbpd-row .bbpd-sb{flex:1 1 auto!important;width:100%!important;height:54px!important;min-height:54px!important;box-sizing:border-box!important;margin:0!important;white-space:nowrap!important;position:relative!important;top:auto!important;transform:none!important}'+
     /* 3) siralama paneli */
     'html:not(.bb-sorton) .bb-sortp:not(.bb-sortst){display:none!important}'+
     'html.bb-sorton .bb-sortpar{flex-wrap:wrap!important}'+
@@ -864,6 +864,22 @@
     if(best) best.classList.add('bbpd-fv');
   }
 
+  /* 2b) Sepete Ekle: sepet ikonunu yazinin hemen soluna ortalar.
+     Ikon butonun arka plan resmi; yazi genisligi olculup konumu hesaplanir,
+     boylece buton hangi genislikte olursa olsun ikon+yazi birlikte ortada durur. */
+  function cartIcon(){
+    var b=document.querySelector('.bbpd-sb'); if(!b) return;
+    b.style.removeProperty('background-position');
+    if(!mob()) return;
+    var cs=getComputedStyle(b); if(!/^url\(/.test(cs.backgroundImage)) return;
+    var t=(b.tagName==='INPUT'?b.value:txt(b))||'Sepete Ekle';
+    var cx=document.createElement('canvas').getContext('2d'); cx.font=cs.fontWeight+' '+cs.fontSize+' '+cs.fontFamily;
+    var tw=cx.measureText(t).width, iw=parseFloat(cs.backgroundSize)||22, gap=9;
+    var n=tw/2+gap+iw/2-(parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight))/2;
+    var parts=cs.backgroundPosition.split(/,\s*(?![^(]*\))/); parts[0]='calc(50% - '+n.toFixed(1)+'px) 50%';
+    b.style.setProperty('background-position',parts.join(', '),'important');
+  }
+
   /* 3) siralama paneli */
   function sort(){
     if(!mob()||isPD()||!document.body) return;
@@ -898,7 +914,8 @@
     }
   }
 
-  function all(){ try{gal();}catch(e){} try{cart();}catch(e){} try{sort();}catch(e){} }
+  function all(){ try{gal();}catch(e){} try{cart();}catch(e){} try{cartIcon();}catch(e){} try{sort();}catch(e){} }
+  try{ document.fonts && document.fonts.ready.then(function(){ try{cartIcon();}catch(e){} }); }catch(e){}
   var tmr=null; function later(){ clearTimeout(tmr); tmr=setTimeout(all,300); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',all); else all();
   window.addEventListener('load',function(){
