@@ -11,8 +11,10 @@
      - bb-accmid: Hesabim orta alan (Siparislerim, Adres Defterim, Hediye Cekleri)
      - bb-fav   : Hesabim > Favorilerim
      - bb-bc    : kategori silsilesi + Onceki Sayfaya Don
+     - bb-mob   : mobil duzeltmeler (urun gorseli, Sepete Ekle satiri,
+                  kategori/arama siralama paneli)
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v4 (v3 + header altindaki bos beyaz serit kaldirildi)
+   Surum    : v5 (v4 + bb-mob: mobil gorsel / Sepete Ekle / siralama paneli duzeltmesi)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -720,4 +722,143 @@
   (window.bbEarly=window.bbEarly||[]).push(run);
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
   window.addEventListener('load',function(){ run(); setTimeout(function(){ run(); done=true; },1200); });
+})();
+
+/* ===== bb-mob: mobil duzeltmeler (urun gorseli, Sepete Ekle satiri, siralama paneli) =====
+   Ne yapar : Yalnizca 991px ve alti ekranlarda (telefon / tablet):
+     1) Urun sayfasi: ana gorsel alanini buyutur, gorsel kutuyu doldurur.
+     2) Urun sayfasi: adet kutusu + favori + Sepete Ekle ayni hizada, ayni
+        yukseklikte (52px) tek satir olur; butonun kaymasi/oynamasi durur.
+     3) Kategori ve arama sayfalari: turuncu siralama paneli kapali baslar.
+        SIRALAMA'ya basinca urunlerin USTUNE binmeden araya acilir,
+        tekrar basinca kapanir.
+   Nerede   : bb-site.js (Script Yonetimi > Tum Sayfalar - Header).
+   Kaldirmak: Bu blogu bb-site.js'ten silmek. Masaustune dokunmaz.
+   ============================================================== */
+(function(){
+  if(window.__bbmob) return; window.__bbmob=1;
+  var MQ='(max-width:991px)';
+  var css='@media '+MQ+'{'+
+    /* 1) urun gorseli */
+    '.bbpd-gal .swiper-slide{display:flex!important;align-items:center!important;justify-content:center!important;height:min(90vw,440px)!important}'+
+    '.bbpd-gal .swiper-slide>a,.bbpd-gal .swiper-slide>div{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;height:100%!important}'+
+    '.bbpd-gal .swiper-slide img{width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important}'+
+    /* 2) Sepete Ekle satiri */
+    '.bbpd-row{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:nowrap!important;width:100%!important;float:none!important;height:auto!important}'+
+    '.bbpd-row>*{float:none!important;margin:0!important;max-width:none!important}'+
+    '.bbpd-row>.bbpd-q,.bbpd-row>.bbpd-f{flex:0 0 auto!important;width:auto!important}'+
+    '.bbpd-row>.bbpd-b{flex:1 1 auto!important;width:auto!important;min-width:0!important;display:flex!important;align-items:center!important;gap:10px!important}'+
+    '.bbpd-qbox{height:52px!important;min-height:52px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;margin:0!important}'+
+    '.bbpd-fv{width:52px!important;height:52px!important;min-width:52px!important;flex:0 0 52px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important}'+
+    '.bbpd-sb{flex:1 1 auto!important;width:100%!important;height:52px!important;min-height:52px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important;padding:0 12px!important;line-height:1!important;white-space:nowrap!important;position:relative!important;top:auto!important;transform:none!important}'+
+    /* 3) siralama paneli */
+    'html:not(.bb-sorton) .bb-sortp:not(.bb-sortst){display:none!important}'+
+    'html.bb-sorton .bb-sortpar{flex-wrap:wrap!important}'+
+    'html.bb-sorton .bb-sortp,.bb-sortp.bb-sortst{display:flex!important;flex-wrap:wrap!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;flex:0 0 100%!important;position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;max-height:none!important;margin:10px 0!important;box-sizing:border-box!important;z-index:1!important;opacity:1!important;visibility:visible!important}'+
+    'html.bb-sorton .bb-sortb{box-shadow:inset 0 0 0 2px #1e2a3b!important}'+
+  '}';
+  var st=document.createElement('style'); st.id='bb-mob-css'; st.textContent=css;
+  (document.head||document.documentElement).appendChild(st);
+
+  function txt(e){return (e.textContent||'').replace(/\s+/g,' ').trim();}
+  function mob(){return !window.matchMedia || matchMedia(MQ).matches;}
+  function isPD(){return document.body && document.body.classList.contains('ProductBody');}
+  var QI='input[type=text],input[type=number],input[type=tel],input:not([type])';
+
+  /* 1) ana gorseli isaretle */
+  function gal(){
+    if(!isPD()) return;
+    var r=document.getElementById('divIcerik'); if(!r||r.querySelector('.bbpd-gal')) return;
+    var sw=r.querySelectorAll('.swiper-initialized,.swiper-container-initialized');
+    for(var i=0;i<sw.length;i++){
+      var s=sw[i];
+      if(!s.querySelector('.swiper-slide img')) continue;
+      if(/TL|Sepete/i.test(txt(s))) continue;          /* benzer urun slider'i degil */
+      if(s.getBoundingClientRect().width<150) continue; /* kucuk resim seridi degil */
+      s.classList.add('bbpd-gal'); return;
+    }
+  }
+
+  /* 2) Sepete Ekle satirini isaretle */
+  function cart(){
+    if(!isPD()) return;
+    var r=document.getElementById('divIcerik')||document.body; if(r.querySelector('.bbpd-row')) return;
+    var c=r.querySelectorAll('a,button,input[type=submit],input[type=button],div,span'), btn=null;
+    for(var i=0;i<c.length;i++){
+      var e=c[i], t=e.tagName==='INPUT'?(e.value||''):txt(e);
+      if(!/^sepete ekle$/i.test(t.trim())) continue;
+      if(e.closest('.swiper-slide,.owl-item')||!e.offsetParent) continue;
+      var inner=e.querySelector('a,button,input[type=submit],input[type=button]');
+      if(inner && /sepete ekle/i.test(inner.value||txt(inner))) e=inner;
+      while(e.children.length===1 && /^(DIV|A|BUTTON)$/.test(e.children[0].tagName) && txt(e.children[0])===txt(e)) e=e.children[0];
+      btn=e.closest('a,button')||e; break;
+    }
+    if(!btn) return;
+    var row=null, p=btn.parentElement;
+    for(var k=0;k<7 && p && p!==document.body;k++){
+      var q=p.querySelector(QI); if(q && q.offsetParent){ row=p; break; } p=p.parentElement;
+    }
+    if(!row || row.getBoundingClientRect().height>220) return;
+    var inp=row.querySelector(QI), qbox=null;
+    row.classList.add('bbpd-row'); btn.classList.add('bbpd-sb');
+    [].forEach.call(row.children,function(ch){
+      if(ch.contains(inp)){ ch.classList.add('bbpd-q','bbpd-qbox'); qbox=ch; return; }
+      if(ch.contains(btn)){ ch.classList.add('bbpd-b'); return; }
+      if(ch.offsetParent && ch.getBoundingClientRect().width<120) ch.classList.add('bbpd-f');
+    });
+    var best=null, bw=0, cs=row.querySelectorAll('a,button,div,span');
+    for(var j=0;j<cs.length;j++){
+      var f=cs[j]; if(btn.contains(f)||f.contains(btn)||(qbox&&qbox.contains(f))||!f.offsetParent) continue;
+      if(!f.querySelector('svg,i,img') && !/fav/i.test(f.className+' '+f.id)) continue;
+      var b=f.getBoundingClientRect(); if(b.width<28||b.width>90||b.height<28||b.height>90) continue;
+      if(b.width>bw){ bw=b.width; best=f; }
+    }
+    if(best) best.classList.add('bbpd-fv');
+  }
+
+  /* 3) siralama paneli */
+  function sort(){
+    if(!mob()||isPD()||!document.body) return;
+    var old=document.querySelector('.bb-sortp'); if(old && document.body.contains(old)) return;
+    var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null,false), n, sN=null, fN=null;
+    while((n=w.nextNode())){
+      var v=n.nodeValue.replace(/\s+/g,' ').trim(); if(!v) continue;
+      if(!sN && v.toLocaleUpperCase('tr-TR')==='SIRALAMA') sN=n;
+      else if(!fN && /^Fiyata G[öo]re \(Artan\)$/i.test(v) && !n.parentElement.closest('select')) fN=n;
+      if(sN&&fN) break;
+    }
+    if(!fN) return;
+    var sEl=null;
+    if(sN){
+      sEl=sN.parentElement.closest('a,button')||sN.parentElement;
+      while(sEl.parentElement && sEl.parentElement!==document.body && txt(sEl.parentElement).toLocaleUpperCase('tr-TR')==='SIRALAMA') sEl=sEl.parentElement;
+    }
+    var p=fN.parentElement;
+    while(p.parentElement && p.parentElement!==document.body){
+      var pp=p.parentElement;
+      if(sEl && pp.contains(sEl)) break;
+      if(/F[İI]LTRELEME/i.test(txt(pp).toLocaleUpperCase('tr-TR'))) break;
+      if(txt(pp).length>220) break;
+      p=pp;
+    }
+    if(!/Azalan/i.test(txt(p))) return;
+    p.classList.add('bb-sortp'); if(p.parentElement) p.parentElement.classList.add('bb-sortpar');
+    if(!sEl){ p.classList.add('bb-sortst'); return; } /* buton bulunamazsa: acik ama araya yerlesik */
+    if(!sEl.__bbs){
+      sEl.__bbs=1; sEl.classList.add('bb-sortb');
+      sEl.addEventListener('click',function(){ document.documentElement.classList.toggle('bb-sorton'); },true);
+    }
+  }
+
+  function all(){ try{gal();}catch(e){} try{cart();}catch(e){} try{sort();}catch(e){} }
+  var tmr=null; function later(){ clearTimeout(tmr); tmr=setTimeout(all,300); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',all); else all();
+  window.addEventListener('load',function(){
+    all(); setTimeout(all,800);
+    if(window.MutationObserver){
+      var o=new MutationObserver(later); o.observe(document.body,{childList:true,subtree:true});
+      setTimeout(function(){ o.disconnect(); },20000);
+    }
+  });
+  window.addEventListener('resize',later);
 })();
