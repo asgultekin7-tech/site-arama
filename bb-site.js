@@ -17,8 +17,9 @@
      - bb-tab   : UYGULAMA sabit alt menu (Anasayfa/Kategoriler/Sepetim/Favoriler/Hesabim)
      - bb-hes   : UYGULAMA Hesabim ana ekrani (Trendyol tarzi kartlar)
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v15 (v14 + uygulamada alt menudeki Hesabim kartli ana ekran
-              acar: profil karti, 4'lu kisayol, kutucuklar ve Hesabim listesi)
+   Surum    : v16 (v15 + Hesabim ekrani ilk dokunusta da acilir; ad, e-posta ve
+              para puan uye bilgisinden gelir; sitenin tum Hesabim bolumleri
+              Siparislerim / Listelerim / Hesabim kartlarinda)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -512,7 +513,7 @@
   if(window.__bbacc) return; window.__bbacc=1;
   function txt(e){return (e.textContent||e.value||'').replace(/\s+/g,' ').trim();}
   function vis(e){return !!(e && e.offsetParent!==null);}
-  function outHeader(e){return !e.closest('.bb-accroot,.bb-accmenu,header,[class*=header],[id*=header]');}
+  function outHeader(e){return !e.closest('.bb-accroot,.bb-accmenu,header,[class*=header],[id*=header],#bb-hes,#bb-tab,#bb-stk');}   /* uygulama ekranlari haric */
   function leaf(re){
     var a=document.querySelectorAll('a,span,div,li,p,b,strong');
     for(var i=0;i<a.length;i++){ var e=a[i]; if(!vis(e)||!outHeader(e)||!re.test(txt(e))) continue;
@@ -1299,7 +1300,10 @@
        - profil karti (bas harfli avatar, ad soyad, e-posta, Bilgilerimi Duzenle)
        - 4'lu kisayol: Siparislerim / Favorilerim / Hediye Ceklerim / Sepetim
        - 2 kutucuk: Tum Siparislerim (kargo takibi) / Adres Defterim
-       - "Hesabim" listesi: Uyelik Bilgilerim, Adres Defterim, Cikis Yap
+       - Siparislerim / Listelerim / Hesabim kartlari: sitenin Hesabim menusundeki
+         tum bolumler (iade, iptal, yorumlar, alarm listeleri, para puan,
+         sozlesmeler, destek, havale bildirimi, guvenli cikis)
+     Ad, e-posta ve para puan Ticimax'in /api/member/GetMember cevabindan okunur.
      Bir kutucuga basinca sitenin kendi ilgili sayfasi acilir; geri tusu ana
      ekrana dondurur. Uyelik islemleri tamamen Ticimax'ta kalir.
    Nerede   : bb-site.js (Script Yonetimi > Tum Sayfalar - Header).
@@ -1324,7 +1328,8 @@
     '#bb-hes .bh-who{min-width:0;flex:1}'+
     '#bb-hes .bh-ad{font-size:19px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
     '#bb-hes .bh-mail{font-size:13px;color:#6b7585;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
-    '#bb-hes .bh-mail:empty{display:none}'+
+    '#bb-hes .bh-mail:empty,#bb-hes .bh-pp:empty{display:none}'+
+    '#bb-hes .bh-pp{font-size:12.5px;color:#1a9e4b;font-weight:700;margin-top:4px}'+
     '#bb-hes .bh-ed{display:inline-flex;align-items:center;gap:4px;margin-top:9px;background:#fff4e5;color:#e07f00;font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px}'+
     '#bb-hes .bh-grid{display:grid;grid-template-columns:repeat(4,1fr);padding:14px 4px}'+
     '#bb-hes .bh-g{display:flex;flex-direction:column;align-items:center;gap:7px;padding:4px 2px;text-align:center;font-size:12.5px;font-weight:600;line-height:1.2;position:relative}'+
@@ -1358,8 +1363,20 @@
     adr:'<path d="M12 21s-6.5-6.1-6.5-11a6.5 6.5 0 0 1 13 0c0 4.9-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
     uye:'<circle cx="12" cy="8.2" r="4"/><path d="M4.5 20.5c.8-3.9 3.9-6.2 7.5-6.2s6.7 2.3 7.5 6.2"/>',
     cik:'<path d="M14 4.5h4.5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H14"/><path d="M10 8l-4 4 4 4M6 12h10"/>',
-    ok:'<path d="m9 6 6 6-6 6"/>'
+    ok:'<path d="m9 6 6 6-6 6"/>',
+    iade:'<path d="M4 9a8 8 0 0 1 14.5-3.5L20 7"/><path d="M20 3v4h-4"/><path d="M20 15a8 8 0 0 1-14.5 3.5L4 17"/><path d="M4 21v-4h4"/>',
+    ipt:'<circle cx="12" cy="12" r="8.5"/><path d="m9 9 6 6M15 9l-6 6"/>',
+    yor:'<path d="M4.5 5.5h15v10h-9l-4 3.5v-3.5h-2z"/><path d="M8.5 9.5h7M8.5 12.5h4"/>',
+    ist:'<path d="M8.5 6.5h11M8.5 12h11M8.5 17.5h11"/><circle cx="4.5" cy="6.5" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="17.5" r="1"/>',
+    fiy:'<path d="M3.5 12.5V4.5h8l9 9-8 8z"/><circle cx="8" cy="9" r="1.5"/><path d="M14 13v4m0 0-1.8-1.8M14 17l1.8-1.8"/>',
+    stk:'<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+    puan:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M9.5 9.5c0-1.2 1.1-2 2.5-2s2.5.8 2.5 2-1.1 1.7-2.5 2.2-2.5 1-2.5 2.3.9 2 2.5 2 2.5-.8 2.5-2"/>',
+    des:'<path d="M4.5 13v-1a7.5 7.5 0 0 1 15 0v1"/><rect x="3.5" y="13" width="4" height="6" rx="1.5"/><rect x="16.5" y="13" width="4" height="6" rx="1.5"/><path d="M18.5 19c0 1.5-2 2-5 2"/>',
+    hav:'<path d="M3.5 9.5 12 4l8.5 5.5z"/><path d="M5.5 10v7M10 10v7M14 10v7M18.5 10v7M3.5 19.5h17"/>',
+    soz:'<path d="M6.5 3.5h8l4 4v13h-12z"/><path d="M14.5 3.5v4h4M9 12h6M9 15.5h6"/>',
+    duy:'<path d="M4 10v4h3l6 4V6L7 10z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/>'
   };
+  function li(k,h,t){ return '<a class="bh-l" data-h="'+h+'">'+ic(k)+'<span>'+t+'</span>'+ic('ok','bh-ok')+'</a>'; }
   function ic(k,c){ return '<svg viewBox="0 0 24 24"'+(c?' class="'+c+'"':'')+'>'+I[k]+'</svg>'; }
   function txt(e){return (e.textContent||'').replace(/\s+/g,' ').trim();}
 
@@ -1386,14 +1403,28 @@
          if(mail) sessionStorage.setItem('bbHesMail',mail); else mail=sessionStorage.getItem('bbHesMail')||''; }catch(x){}
     return {ad:ad,mail:mail};
   }
+  /* Ticimax uye bilgisi: /api/member/GetMember (giris yapmis uyenin ad, soyad, e-posta, para puan) */
+  var UYE=null, uyeIst=false;
+  function uyeGetir(){
+    if(UYE||uyeIst) return; uyeIst=true;
+    try{ var c=sessionStorage.getItem('bbUye'); if(c){ UYE=JSON.parse(c); if(box) doldur(); } }catch(e){}
+    fetch('/api/member/GetMember',{credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}})
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(j){
+        if(!j||j.isError||!j.id) return;
+        UYE={ad:((j.name||'')+' '+(j.lastName||'')).trim(), mail:j.eMail||'', puan:+j.user_money_point||0};
+        try{ sessionStorage.setItem('bbUye',JSON.stringify(UYE)); }catch(e){}
+        if(box) doldur();
+      })['catch'](function(){});
+  }
   function harf(ad){ var p=ad.split(' ').filter(Boolean); return ((p[0]||'')[0]||'')+((p.length>1?p[p.length-1]:'')[0]||''); }
 
-  var box=null, acilisHash=null;
+  var box=null;
   var R='/Hesabim.aspx#/';
   function build(){
     box=document.createElement('div'); box.id='bb-hes';
     box.innerHTML=
-      '<div class="bh-card bh-pro"><div class="bh-av"></div><div class="bh-who"><div class="bh-ad">Hesab\u0131m</div><div class="bh-mail"></div>'+
+      '<div class="bh-card bh-pro"><div class="bh-av"></div><div class="bh-who"><div class="bh-ad">Hesab\u0131m</div><div class="bh-mail"></div><div class="bh-pp"></div>'+
         '<a class="bh-ed" data-h="Uyelik-Bilgilerim">Bilgilerimi D\u00fczenle '+ic('ok','bh-ok')+'</a></div></div>'+
       '<div class="bh-card bh-grid">'+
         '<a class="bh-g" data-h="Siparislerim">'+ic('sip')+'Sipari\u015flerim</a>'+
@@ -1405,11 +1436,20 @@
         '<a class="bh-t" data-h="Siparislerim">'+ic('kar')+'<span>Kargom Nerede?</span>'+ic('ok','bh-ok')+'</a>'+
         '<a class="bh-t" data-h="AdresDefterim">'+ic('adr')+'<span>Adres Defterim</span>'+ic('ok','bh-ok')+'</a>'+
       '</div>'+
+      '<div class="bh-card"><div class="bh-h">Sipari\u015flerim</div>'+
+        li('sip','Siparislerim','T\u00fcm Sipari\u015flerim')+li('iade','IadeTaleplerim','\u0130ade Taleplerim')+
+        li('ipt','IptalTaleplerim','\u0130ptal Taleplerim')+li('yor','Yorumlarim','Yorumlar\u0131m')+
+      '</div>'+
+      '<div class="bh-card"><div class="bh-h">Listelerim</div>'+
+        li('ist','IstekListelerim','\u0130stek Listelerim')+li('fiy','FiyatAlarmListem','Fiyat Alarm Listem')+
+        li('stk','StokAlarmListem','Stok Alarm Listem')+
+      '</div>'+
       '<div class="bh-card"><div class="bh-h">Hesab\u0131m</div>'+
-        '<a class="bh-l" data-h="Uyelik-Bilgilerim">'+ic('uye')+'<span>\u00dcyelik Bilgilerim</span>'+ic('ok','bh-ok')+'</a>'+
-        '<a class="bh-l" data-h="Siparislerim">'+ic('sip')+'<span>T\u00fcm Sipari\u015flerim</span>'+ic('ok','bh-ok')+'</a>'+
-        '<a class="bh-l" data-h="AdresDefterim">'+ic('adr')+'<span>Adres Defterim</span>'+ic('ok','bh-ok')+'</a>'+
-        '<a class="bh-l bh-out" href="/UyeCikis.ashx">'+ic('cik')+'<span>\u00c7\u0131k\u0131\u015f Yap</span></a>'+
+        li('uye','Uyelik-Bilgilerim','\u00dcyelik Bilgilerim')+li('adr','AdresDefterim','Adres Defterim')+
+        li('puan','ParaPuanlarim','Para Puanlar\u0131m')+li('cek','HediyeCeklerim','Hediye \u00c7eklerim')+
+        li('duy','IletisimIzinlerim','Duyuru Tercihlerim')+li('soz','Sozlesmelerim','S\u00f6zle\u015fmelerim')+
+        li('des','DestekTaleplerim','Destek Taleplerim')+li('hav','HavaleBildirim','Havale Bildirim Formu')+
+        '<a class="bh-l bh-out" href="/UyeCikis.ashx">'+ic('cik')+'<span>G\u00fcvenli \u00c7\u0131k\u0131\u015f</span></a>'+
       '</div>'+
       '<div class="bh-v">Bence Burada</div>';
     box.addEventListener('click',function(ev){
@@ -1420,21 +1460,24 @@
         var l=document.querySelector('.header-cart-link'); kapat(); if(l) l.click(); return;
       }
       var h=a.getAttribute('data-h');
-      if(location.pathname.toLowerCase().indexOf('/hesabim')===0){ kapat(); location.hash='#/'+h; }   /* ayni sayfa: Ticimax kendi bolumunu acar */
+      if(hesapSayfasi()){ kapat(); location.hash='#/'+h; }   /* ayni sayfa: Ticimax kendi bolumunu acar */
       else location.href=R+h;
     });
     document.body.appendChild(box);
   }
   function doldur(){
-    var k=kim(), av=box.querySelector('.bh-av');
+    var k=UYE&&UYE.ad?UYE:kim(), av=box.querySelector('.bh-av');
+    box.querySelector('.bh-pp').textContent=(UYE&&UYE.puan>0)?('Para Puan\u0131n: '+UYE.puan.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' TL'):'';
     box.querySelector('.bh-ad').textContent=k.ad||'Ho\u015f geldin \ud83d\udc4b';
     box.querySelector('.bh-mail').textContent=k.mail;
     var h=harf(k.ad).toLocaleUpperCase('tr-TR');
     if(h) av.textContent=h; else av.innerHTML=ic('uye');
   }
-  function ac(){ if(!box) build(); acilisHash=location.hash; doldur(); H.classList.add('bbhes'); box.scrollTop=0; }
+  function ac(){ if(!box) build(); uyeGetir(); doldur(); H.classList.add('bbhes'); box.scrollTop=0; }
   function kapat(){ H.classList.remove('bbhes'); }
   function hesapSayfasi(){ return location.pathname.toLowerCase().indexOf('/hesabim')===0; }
+  /* Ticimax Hesabim'in kendi giris adresi (#/Hesabim-Anasayfa) ya da bos adres = ana ekran */
+  function anaHash(){ var h=(location.hash||'').replace(/^#\/?/,''); return !h || /^Hesabim-Anasayfa$/i.test(h); }
   window.bbHesabimAc=function(){
     if(hesapSayfasi()){ ac(); return; }
     try{ sessionStorage.setItem(KEY,'1'); }catch(e){}
@@ -1443,13 +1486,12 @@
   function ilk(){
     if(!document.body||!hesapSayfasi()) return;
     var f=null; try{ f=sessionStorage.getItem(KEY); sessionStorage.removeItem(KEY); }catch(e){}
-    var h=(location.hash||'').replace(/^#\/?/,'');
-    if(f || !h) ac();                                          /* alt menuden geldi ya da alt sayfa secilmemis */
+    if(f || anaHash()) ac();                                   /* alt menuden geldi ya da alt sayfa secilmemis */
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',ilk); else ilk();
   window.addEventListener('load',function(){ if(H.classList.contains('bbhes')) doldur(); setTimeout(function(){ if(box&&H.classList.contains('bbhes')) doldur(); },1500); });
   window.addEventListener('hashchange',function(){
     if(!hesapSayfasi()) return;
-    if(acilisHash!==null && location.hash===acilisHash) ac(); else kapat();     /* geri tusu: ana ekrana don */
+    if(anaHash()) ac(); else kapat();                          /* alt sayfaya gidince kapan, geri gelince ac */
   });
 })();
