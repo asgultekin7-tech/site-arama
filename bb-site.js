@@ -15,9 +15,9 @@
                   kategori/arama siralama paneli)
      - bb-stk   : UYGULAMA urun sayfasi sabit alt bar (fiyat + adet + favori + Sepete Ekle)
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v11 (v10 + uygulamada adet (- 1 +) ve favori kalbi sabit
-              barda fiyat ile Sepete Ekle arasinda; sayfadaki adet satiri
-              gizlendi; fiyat ve Sepete Ekle biraz kuculdu)
+   Surum    : v12 (v11 + uygulamada Sepete Ekle'ye basinca "Ekleniyor…" /
+              "Eklendi ✓" ve "Sepete Git" bildirimi; favori kalbi sayfaya
+              gec gelse de bulunur, geri donunce kaybolmaz)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -984,6 +984,13 @@
       'display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;padding:0 8px;white-space:nowrap;overflow:hidden}'+
     '#bb-stk .bbs-b:active{background:#e07f00;transform:scale(.98)}'+
     '#bb-stk .bbs-b svg{width:17px;height:17px;flex:0 0 17px}'+
+    '#bb-stk .bbs-b.bbs-wait{opacity:.75;pointer-events:none}'+
+    '#bb-stk .bbs-b.bbs-ok{background:#1a9e4b}'+
+    '#bb-tst{position:fixed;left:10px;right:10px;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:2147483001;background:#1e2a3b;color:#fff;border-radius:12px;'+
+      'padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.18);'+
+      'opacity:0;transform:translateY(10px);transition:opacity .2s,transform .2s;pointer-events:none;font-family:inherit}'+
+    '#bb-tst.on{opacity:1;transform:none;pointer-events:auto}'+
+    '#bb-tst a{color:#f7a21b;font-weight:700;white-space:nowrap;text-decoration:none}'+
     'html.bbstk body{padding-bottom:calc(66px + env(safe-area-inset-bottom,0px))!important}'+
     'html.bbstk .bbpd-row,html.bbstk .bbpd-fvw,html.bbstk .bbpd-prw{display:none!important}'+
     '}@media (max-width:389px){#bb-stk{gap:6px;padding-left:8px;padding-right:8px}#bb-stk .bbs-b svg{display:none}#bb-stk .bbs-n{font-size:16px}#bb-stk .bbs-q button{width:24px}}'+
@@ -991,11 +998,11 @@
   var st=document.createElement('style'); st.id='bb-stk-css'; st.textContent=css;
   (document.head||H).appendChild(st);
 
-  var PR=/^\s*\d{1,3}(\.\d{3})*,\d{2}\s*(TL|₺)\s*$/i, PRG=/\d{1,3}(\.\d{3})*,\d{2}\s*(TL|₺)/gi;
+  var PR=/^\s*\d{1,3}(\.\d{3})*,\d{2}\s*(TL|\u20ba)\s*$/i, PRG=/\d{1,3}(\.\d{3})*,\d{2}\s*(TL|\u20ba)/gi;
   function txt(e){return (e.textContent||'').replace(/\s+/g,' ').trim();}
   function isPD(){return document.body && document.body.classList.contains('ProductBody');}
   function num(s){return parseFloat(s.replace(/[^\d,]/g,'').replace(',','.'))||0;}
-  function fmt(s){return s.replace(/\s+/g,'').replace(/(TL|₺)$/i,' TL');}
+  function fmt(s){return s.replace(/\s+/g,'').replace(/(TL|\u20ba)$/i,' TL');}
   function vis(e){return !!(e.offsetParent||e.closest('.bbpd-prw'));}
 
   /* sayfadaki fiyatlari bul: en buyuk yazili = guncel fiyat, ustu cizili = eski fiyat */
@@ -1023,7 +1030,7 @@
     while(p.parentElement && p.parentElement!==r){
       var par=p.parentElement;
       if(par.querySelector('h1,h2,h3,input,button,.bbpd-row,.bbpd-gal,img,svg')) break;
-      var rest=txt(par).replace(PRG,'').replace(/%\s*\d+|\d+\s*%|KDV|Dahil|Hari[çc]|[İI]ndirim(li)?|Fiyat[ıi]?|Piyasa|Sat[ıi][şs]|:/gi,'').trim();
+      var rest=txt(par).replace(PRG,'').replace(/%\s*\d+|\d+\s*%|KDV|Dahil|Hari[\u00e7c]|[\u0130I]ndirim(li)?|Fiyat[\u0131i]?|Piyasa|Sat[\u0131i][\u015fs]|:/gi,'').trim();
       if(rest.length>3) break;
       p=par;
     }
@@ -1045,13 +1052,29 @@
     var c=[].filter.call(q.querySelectorAll('a,button,span,i,div,input[type=button]'),function(e){
       if(e===inp||e.contains(inp)) return false;
       if(e.querySelector('a,button,input[type=button]')) return false;
-      var t=(e.value||txt(e)).trim(); return /^[-−–+]$/.test(t)||/azalt|eksi|minus|arttir|artir|art[ıi]r|plus|arti/i.test(e.className+' '+(e.getAttribute('title')||''));
+      var t=(e.value||txt(e)).trim(); return /^[-\u2212\u2013+]$/.test(t)||/azalt|eksi|minus|arttir|artir|art[\u0131i]r|plus|arti/i.test(e.className+' '+(e.getAttribute('title')||''));
     });
     var m=null,pl=null;
     c.forEach(function(e){ var t=(e.value||txt(e)).trim(), k=e.className+' '+(e.getAttribute('title')||'');
-      if(/^[-−–]$/.test(t)||/azalt|eksi|minus/i.test(k)){ if(!m) m=e; } else if(!pl) pl=e; });
+      if(/^[-\u2212\u2013]$/.test(t)||/azalt|eksi|minus/i.test(k)){ if(!m) m=e; } else if(!pl) pl=e; });
     return {m:m,p:pl};
   }
+  function cartCount(){ var e=document.querySelector('.sepetUrunSayisi'); if(!e) return null; var n=parseInt(txt(e),10); return isNaN(n)?0:n; }
+  var tT=0;
+  function toast(){
+    var t=document.getElementById('bb-tst');
+    if(!t){
+      t=document.createElement('div'); t.id='bb-tst';
+      t.innerHTML='<span>\u2713 \u00dcr\u00fcn sepete eklendi</span><a href="/sepetim">Sepete Git \u203a</a>';
+      t.querySelector('a').addEventListener('click',function(ev){
+        var l=document.querySelector('.header-cart-link'); if(l){ ev.preventDefault(); t.classList.remove('on'); l.click(); }
+      });
+      document.body.appendChild(t);
+    }
+    t.classList.add('on'); clearTimeout(tT); tT=setTimeout(function(){ t.classList.remove('on'); },3500);
+  }
+  /* favori: bizim kalp (.bbUFav) varsa o, yoksa bb-mob'un buldugu */
+  function favEl(){ return document.querySelector('.bbpd-row .bbUFav,.TopDet .bbUFav')||document.querySelector('.bbpd-fv'); }
   function qVal(){ var i=qInp(); var v=i?parseInt(i.value,10):1; return v>0?v:1; }
   function showQ(){ if(bar) bar.querySelector('.bbs-q span').textContent=qVal(); }
   function step(d){
@@ -1074,14 +1097,27 @@
       '<button type="button" class="bbs-b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+
       '<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h2.6l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h8.6a1.6 1.6 0 0 0 1.6-1.2l1.7-7.3H6"/></svg><span>Sepete Ekle</span></button>';
     bar.querySelector('.bbs-b').addEventListener('click',function(){
-      var b=document.querySelector('.bbpd-sb'); if(b) b.click();
+      var b=document.querySelector('.bbpd-sb'); if(!b) return;
+      var me=this, lb=me.querySelector('span'), c0=cartCount(), t0=Date.now();
+      me.classList.add('bbs-wait'); lb.textContent='Ekleniyor\u2026';
+      b.click();                                              /* Ticimax'in asil Sepete Ekle'si */
+      (function bekle(){
+        var c=cartCount();
+        if(c!==null && c0!==null && c>c0){                    /* sepet sayisi artti: eklendi */
+          me.classList.remove('bbs-wait'); me.classList.add('bbs-ok'); lb.textContent='Eklendi \u2713';
+          toast(); setTimeout(function(){ me.classList.remove('bbs-ok'); lb.textContent='Sepete Ekle'; },1800);
+          return;
+        }
+        if(Date.now()-t0>6000){ me.classList.remove('bbs-wait'); lb.textContent='Sepete Ekle'; return; }   /* uyariyi Ticimax gosterir */
+        setTimeout(bekle,200);
+      })();
     });
     bar.querySelector('.bbs-m').addEventListener('click',function(){ step(-1); });
     bar.querySelector('.bbs-pl').addEventListener('click',function(){ step(1); });
     bar.querySelector('.bbs-f').addEventListener('click',function(){
-      var fv=document.querySelector('.bbpd-fv'); if(!fv) return;
+      var fv=favEl(); if(!fv) return;
       var a=fv.matches('a,button')?fv:(fv.querySelector('a,button')||fv); a.click();   /* gizli olsa da asil kalp calisir */
-      favState=!favState; favT=Date.now(); this.classList.toggle('on',favState);
+      if(!fv.classList.contains('bbUFav')){ favState=!favState; favT=Date.now(); this.classList.toggle('on',favState); }
     });
     document.body.appendChild(bar);
   }
@@ -1101,14 +1137,15 @@
     }
     markPrice(p.ce); markPrice(p.oe);
     if(qInp()){ bar.classList.add('bbs-hq'); if(document.activeElement!==qInp()) showQ(); }
-    var fv=document.querySelector('.bbpd-fv');
+    var fv=favEl();                                           /* her turda yeniden aranir: kalp gec gelse de bulunur */
     if(!fv){ var rw=document.querySelector('.bbpd-row'); fv=rw&&rw.querySelector('.bbpd-f'); if(fv) fv.classList.add('bbpd-fv'); }
     if(fv){
       bar.classList.add('bbs-hf');
       var row=document.querySelector('.bbpd-row'), w=fv;
       if(row && row.contains(fv)){ while(w.parentElement && w.parentElement!==row) w=w.parentElement; }
       w.classList.add('bbpd-fvw');
-      var det=favOn(fv);
+      var det=fv.classList.contains('bbUFav')?fv.classList.contains('on'):favOn(fv);
+      if(fv.classList.contains('bbUFav')) favT=0;
       if(favState===null || (det && Date.now()-favT>1500)) favState=det;   /* sayfa "dolu" diyorsa ona uy */
       bar.querySelector('.bbs-f').classList.toggle('on',!!favState);
     }
