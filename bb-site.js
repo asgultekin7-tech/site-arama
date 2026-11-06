@@ -17,9 +17,8 @@
      - bb-tab   : UYGULAMA sabit alt menu (Anasayfa/Kategoriler/Sepetim/Favoriler/Hesabim)
      - bb-hes   : UYGULAMA Hesabim ana ekrani (Trendyol tarzi kartlar)
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v16 (v15 + Hesabim ekrani ilk dokunusta da acilir; ad, e-posta ve
-              para puan uye bilgisinden gelir; sitenin tum Hesabim bolumleri
-              Siparislerim / Listelerim / Hesabim kartlarinda)
+   Surum    : v17 (v16 + alt menude hiz: Anasayfa/Hesabim onceden indirilir,
+              dokununca aninda tepki ve yukleme cizgisi)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -1197,6 +1196,8 @@
      Bulunulan sayfanin sekmesi turuncu yanar. Urun sayfasinda gizlenir (orada
      fiyat + Sepete Ekle bari var), sepet/odeme sayfalarinda da gizlenir.
      Sayfadaki "yukari cik" butonu menunun ustune tasinir.
+     Hiz: sekmeye dokununca aninda turuncu yanar ve ustte yukleme cizgisi
+     akar; Anasayfa ve Hesabim arka planda onceden indirilir (prefetch).
    Nerede   : bb-site.js (Script Yonetimi > Tum Sayfalar - Header).
    Kaldirmak: Bu blogu bb-site.js'ten silmek. Web sitesine dokunmaz.
    ============================================================== */
@@ -1222,6 +1223,9 @@
     'html.bbtab #back-to-top{bottom:calc(70px + env(safe-area-inset-bottom,0px))!important}'+
     'html.bbstk #back-to-top{bottom:calc(72px + env(safe-area-inset-bottom,0px))!important}'+
     'html.bbtab:has(#bbYakinda.acik) #bb-tab{display:none}'+
+    '#bb-yuk{position:fixed;left:0;top:0;height:3px;width:0;z-index:2147483646;background:#f39200;box-shadow:0 0 8px rgba(243,146,0,.6);pointer-events:none;opacity:0}'+
+    'html.bbyuk #bb-yuk{opacity:1;animation:bbyuk 6s cubic-bezier(.1,.7,.2,1) forwards}'+
+    '@keyframes bbyuk{0%{width:0}15%{width:45%}40%{width:70%}100%{width:94%}}'+
     '}';
   var st=document.createElement('style'); st.id='bb-tab-css'; st.textContent=css;
   (document.head||H).appendChild(st);
@@ -1272,11 +1276,33 @@
       if(l) l.click(); else location.href='/Sepetim';
     });
     bar.querySelector('[data-t=fav]').addEventListener('click',function(){ setTimeout(sync,300); });
+    /* dokunur dokunmaz tepki: sekme turuncu yanar, ustte yukleme cizgisi akar */
+    bar.addEventListener('click',function(ev){
+      var a=ev.target.closest('a'); if(!a) return;
+      var t=a.getAttribute('data-t'); if(t==='kat'||t==='sep') return;
+      [].forEach.call(bar.querySelectorAll('a'),function(x){ x.classList.toggle('on',x===a); });
+      setTimeout(function(){ if(!H.classList.contains('bbhes')||t!=='hes') yukle(); },0);
+    },true);
     bar.querySelector('[data-t=hes]').addEventListener('click',function(ev){
       if(typeof window.bbHesabimAc==='function'){ ev.preventDefault(); window.bbHesabimAc(); setTimeout(sync,50); }   /* kartli Hesabim ekrani */
     });
     document.body.appendChild(bar);
   }
+  function yukle(){
+    if(!document.getElementById('bb-yuk')){ var y=document.createElement('div'); y.id='bb-yuk'; document.body.appendChild(y); }
+    H.classList.remove('bbyuk'); void H.offsetWidth; H.classList.add('bbyuk');
+  }
+  /* sik gidilen sayfalari arka planda onceden indir: dokununca bekleme kisalir */
+  function onceden(){
+    var p=location.pathname.toLowerCase(), l=[];
+    if(p!=='/'&&p!=='/default.aspx') l.push('/');
+    if(p.indexOf('/hesabim')!==0) l.push('/Hesabim');
+    l.forEach(function(u){
+      var o=document.querySelector('link[data-bbpf="'+u+'"]'); if(o) o.parentNode.removeChild(o);
+      var k=document.createElement('link'); k.rel='prefetch'; k.href=u; k.setAttribute('data-bbpf',u); document.head.appendChild(k);
+    });
+  }
+  window.addEventListener('pageshow',function(){ H.classList.remove('bbyuk'); });
   function sync(){
     if(!document.body) return;
     if(gizle()){ H.classList.remove('bbtab'); return; }
@@ -1289,7 +1315,10 @@
   }
   function run(){ try{sync();}catch(e){} }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
-  window.addEventListener('load',function(){ run(); setTimeout(run,1000); setInterval(run,2000); });   /* rozetler guncel kalir */
+  window.addEventListener('load',function(){
+    run(); setTimeout(run,1000); setInterval(run,2000);                 /* rozetler guncel kalir */
+    setTimeout(onceden,1500); setInterval(onceden,240000);              /* 4 dk'da bir tazele */
+  });
   window.addEventListener('hashchange',run);
 })();
 
