@@ -15,9 +15,9 @@
                   kategori/arama siralama paneli)
      - bb-stk   : UYGULAMA urun sayfasi sabit alt bar (fiyat + adet + favori + Sepete Ekle)
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v12 (v11 + uygulamada Sepete Ekle'ye basinca "Ekleniyor…" /
-              "Eklendi ✓" ve "Sepete Git" bildirimi; favori kalbi sayfaya
-              gec gelse de bulunur, geri donunce kaybolmaz)
+   Surum    : v13 (v12 + uygulamada Sepete Ekle telefonda da calisir: Ticimax'in
+              "surukleme" bayragi sifirlanir, istek gitmezse dogrudan eklenir;
+              "Eklendi" sunucu cevabina gore gosterilir)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -1059,6 +1059,24 @@
       if(/^[-\u2212\u2013]$/.test(t)||/azalt|eksi|minus/i.test(k)){ if(!m) m=e; } else if(!pl) pl=e; });
     return {m:m,p:pl};
   }
+  /* sepete ekleme isteklerini izle (Ticimax: .../AddToCart...) */
+  var ADD={n:0,ok:false,err:false};
+  function addSonuc(st,body){
+    ADD.err=!(st>=200&&st<300) || /"(isError|IsError|hata|Hata)"\s*:\s*true|"(success|Success|IsSuccess|isSuccess)"\s*:\s*false/.test(body||'');
+    ADD.ok=!ADD.err; ADD.n++;
+  }
+  try{
+    var xo=XMLHttpRequest.prototype.open, xs=XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open=function(m,u){ this.__bbadd=/addtocart|sepeteekle/i.test(String(u)); return xo.apply(this,arguments); };
+    XMLHttpRequest.prototype.send=function(){
+      if(this.__bbadd){ var x=this; x.addEventListener('loadend',function(){ var t=''; try{t=x.responseText;}catch(e){} addSonuc(x.status,t); }); }
+      return xs.apply(this,arguments);
+    };
+    if(window.fetch){ var fo=window.fetch; window.fetch=function(u){
+      var pr=fo.apply(this,arguments);
+      if(/addtocart|sepeteekle/i.test(String(u&&u.url||u))) pr.then(function(r){ r.clone().text().then(function(t){addSonuc(r.status,t);},function(){addSonuc(r.status,'');}); },function(){addSonuc(0,'');});
+      return pr; }; }
+  }catch(e){}
   function cartCount(){ var e=document.querySelector('.sepetUrunSayisi'); if(!e) return null; var n=parseInt(txt(e),10); return isNaN(n)?0:n; }
   var tT=0;
   function toast(){
@@ -1098,17 +1116,24 @@
       '<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h2.6l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h8.6a1.6 1.6 0 0 0 1.6-1.2l1.7-7.3H6"/></svg><span>Sepete Ekle</span></button>';
     bar.querySelector('.bbs-b').addEventListener('click',function(){
       var b=document.querySelector('.bbpd-sb'); if(!b) return;
-      var me=this, lb=me.querySelector('span'), c0=cartCount(), t0=Date.now();
+      var me=this, lb=me.querySelector('span'), c0=cartCount(), t0=Date.now(), n0=ADD.n, yedek=false;
       me.classList.add('bbs-wait'); lb.textContent='Ekleniyor\u2026';
-      b.click();                                              /* Ticimax'in asil Sepete Ekle'si */
+      /* Ticimax, parmak milim kaydiysa ("surukleme") tiklamayi sessizce yok sayar;
+         bayragi sifirlayip asil Sepete Ekle'ye basiyoruz */
+      try{ window.draggingTouchEvent=false; }catch(e){}
+      b.click();
       (function bekle(){
         var c=cartCount();
-        if(c!==null && c0!==null && c>c0){                    /* sepet sayisi artti: eklendi */
+        if(!yedek && ADD.n===n0 && Date.now()-t0>1200 && typeof window.sepeteEkleUrunDetay==='function'){
+          yedek=true; try{ window.draggingTouchEvent=false; window.sepeteEkleUrunDetay(); }catch(e){}   /* istek hic gitmediyse dogrudan cagir */
+        }
+        if(ADD.n>n0 && ADD.err){ me.classList.remove('bbs-wait'); lb.textContent='Sepete Ekle'; return; }   /* hata: uyariyi Ticimax gosterir */
+        if((ADD.n>n0 && ADD.ok) || (c!==null && c0!==null && c>c0)){   /* sunucu "eklendi" dedi ya da sepet sayisi artti */
           me.classList.remove('bbs-wait'); me.classList.add('bbs-ok'); lb.textContent='Eklendi \u2713';
           toast(); setTimeout(function(){ me.classList.remove('bbs-ok'); lb.textContent='Sepete Ekle'; },1800);
           return;
         }
-        if(Date.now()-t0>6000){ me.classList.remove('bbs-wait'); lb.textContent='Sepete Ekle'; return; }   /* uyariyi Ticimax gosterir */
+        if(Date.now()-t0>8000){ me.classList.remove('bbs-wait'); lb.textContent='Sepete Ekle'; return; }
         setTimeout(bekle,200);
       })();
     });
