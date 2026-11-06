@@ -13,9 +13,11 @@
      - bb-bc    : kategori silsilesi + Onceki Sayfaya Don
      - bb-mob   : mobil duzeltmeler (urun gorseli, Sepete Ekle satiri,
                   kategori/arama siralama paneli)
+     - bb-stk   : UYGULAMA urun sayfasi sabit alt bar (fiyat + Sepete Ekle)
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v7 (v6 + Sepete Ekle butonunda sepet ikonu yazinin
-              yanina ortalandi; her ekran genisliginde hizali)
+   Surum    : v9 (v8 + mobil uygulamada urun sayfasina sayfa kaydirilsa da sabit
+              kalan alt bar: fiyat (indirimde eski fiyat + yuzde) ve
+              Sepete Ekle; asil butona basar, Ticimax islemleri aynen kalir)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -757,6 +759,12 @@
     '.bbpd-qbox input{width:auto!important;min-width:0!important;flex:1 1 auto!important;height:52px!important}'+
     '.bbpd-row>.bbpd-b{flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;display:flex!important;align-items:center!important}'+
     '.bbpd-row .bbpd-sb{flex:1 1 auto!important;width:100%!important;height:54px!important;min-height:54px!important;box-sizing:border-box!important;margin:0!important;white-space:nowrap!important;position:relative!important;top:auto!important;transform:none!important}'+
+    /* 2c) dar telefonlar (400px ve alti): satir sigsin, yazi tasmasin */
+    '}@media (max-width:400px){'+
+    '.bbpd-row{gap:8px!important}'+
+    '.bbpd-row>.bbpd-qbox{flex:0 0 106px!important;width:106px!important;max-width:106px!important}'+
+    '.bbpd-row .bbpd-sb{font-size:15px!important;padding-left:6px!important;padding-right:6px!important;letter-spacing:0!important;overflow:hidden!important}'+
+    '}@media '+MQ+'{'+
     /* 3) siralama paneli */
     'html:not(.bb-sorton) .bb-sortp:not(.bb-sortst){display:none!important}'+
     'html.bb-sorton .bb-sortpar{flex-wrap:wrap!important}'+
@@ -926,4 +934,103 @@
     }
   });
   window.addEventListener('resize',function(){ later(); [].forEach.call(document.querySelectorAll('.bbpd-gal .swiper-slide img'),zoomImg); });
+})();
+
+/* ===== bb-stk: urun sayfasi sabit alt bar (fiyat + Sepete Ekle) =====
+   Ne yapar : YALNIZCA mobil uygulamada (kullanici ajaninda "BenceBuradaApp" varsa)
+     ve 991px ve alti ekranlarda calisir; web sitesi (masaustu ve mobil) degismez.
+     urun sayfasinin altina sayfa ne kadar kaydirilirsa kaydirilsin sabit duran
+     bir bar ekler: solda fiyat (indirim varsa ustu cizili eski fiyat + yuzde
+     rozeti), sagda turuncu Sepete Ekle butonu.
+     Bar kendi basina sepete ekleme yapmaz; Ticimax'in asil Sepete Ekle butonuna
+     basar. Adet, sayfadaki adet kutusundan okunur; stok, fiyat, kampanya ve
+     sepet islemleri tamamen Ticimax'ta kalir.
+     Asil butonun yeri sayfada gizlenir (cift buton olmasin); adet kutusu ve
+     favori kalbi yerinde kalir. Urun tukendiyse bar hic cikmaz.
+   Nerede   : bb-site.js (Script Yonetimi > Tum Sayfalar - Header).
+   Kaldirmak: Bu blogu bb-site.js'ten silmek. Web sitesine dokunmaz.
+   ============================================================== */
+(function(){
+  if(window.__bbstk) return; window.__bbstk=1;
+  if(!/BenceBuradaApp/i.test(navigator.userAgent||'')) return;      /* yalnizca mobil uygulamada */
+  var MQ='(max-width:991px)', H=document.documentElement;
+  var css='@media '+MQ+'{'+
+    '#bb-stk{position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:#fff;border-top:1px solid #e3e7ee;box-shadow:0 -4px 16px rgba(30,42,59,.08);'+
+      'padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:12px;box-sizing:border-box;font-family:inherit}'+
+    'html:not(.bbstk) #bb-stk{display:none}'+
+    '#bb-stk .bbs-p{flex:0 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;line-height:1.15}'+
+    '#bb-stk .bbs-o{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#6b7585}'+
+    '#bb-stk .bbs-o s{white-space:nowrap}'+
+    '#bb-stk .bbs-r{background:#d93025;color:#fff;font-weight:700;font-size:11px;border-radius:4px;padding:1px 5px}'+
+    '#bb-stk .bbs-n{font-size:20px;font-weight:800;color:#1e2a3b;white-space:nowrap}'+
+    '#bb-stk .bbs-o:empty{display:none}'+
+    '#bb-stk .bbs-o:not(:empty)+.bbs-n{color:#d93025}'+
+    '#bb-stk .bbs-b{flex:1 1 auto;min-width:0;height:50px;border:0;border-radius:10px;background:#f39200;color:#fff;font-size:17px;font-weight:700;'+
+      'display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;padding:0 10px;white-space:nowrap}'+
+    '#bb-stk .bbs-b:active{background:#e07f00;transform:scale(.98)}'+
+    '#bb-stk .bbs-b svg{width:22px;height:22px;flex:0 0 22px}'+
+    'html.bbstk body{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))!important}'+
+    'html.bbstk .bbpd-row>.bbpd-b{display:none!important}'+
+    '}@media (max-width:360px){#bb-stk .bbs-n{font-size:18px}#bb-stk .bbs-b{font-size:15.5px}}';
+  var st=document.createElement('style'); st.id='bb-stk-css'; st.textContent=css;
+  (document.head||H).appendChild(st);
+
+  var PR=/^\s*\d{1,3}(\.\d{3})*,\d{2}\s*(TL|₺)\s*$/i;
+  function txt(e){return (e.textContent||'').replace(/\s+/g,' ').trim();}
+  function isPD(){return document.body && document.body.classList.contains('ProductBody');}
+  function num(s){return parseFloat(s.replace(/[^\d,]/g,'').replace(',','.'))||0;}
+  function fmt(s){return s.replace(/\s+/g,'').replace(/(TL|₺)$/i,' TL');}
+
+  /* sayfadaki fiyatlari bul: en buyuk yazili = guncel fiyat, ustu cizili = eski fiyat */
+  function prices(){
+    var r=document.getElementById('divIcerik')||document.body, row=r.querySelector('.bbpd-row');
+    var lim=row?row.getBoundingClientRect().bottom+window.scrollY+40:Infinity;
+    var els=r.querySelectorAll('span,div,p,b,strong,del,s,ins,label'), cur=null, cf=0, old=null;
+    for(var i=0;i<els.length;i++){
+      var e=els[i]; if(!e.offsetParent||e.closest('.swiper-slide,.owl-item,#bb-stk')) continue;
+      var t=txt(e); if(!PR.test(t)) continue;
+      var ch=false; for(var j=0;j<e.children.length;j++) if(PR.test(txt(e.children[j]))){ch=true;break;}
+      if(ch) continue;
+      if(e.getBoundingClientRect().top+window.scrollY>lim) continue;   /* benzer urunler vb. degil */
+      var cs=getComputedStyle(e), lt=/line-through/.test(cs.textDecorationLine||cs.textDecoration)||/^(DEL|S)$/.test(e.tagName)||(e.parentElement&&/line-through/.test(getComputedStyle(e.parentElement).textDecorationLine||''));
+      if(lt){ if(!old) old=t; continue; }
+      var f=parseFloat(cs.fontSize)||0; if(f>cf){cf=f;cur=t;}
+    }
+    if(old && cur && num(old)<=num(cur)) old=null;
+    return {cur:cur,old:old};
+  }
+
+  var bar=null, last='';
+  function build(){
+    bar=document.createElement('div'); bar.id='bb-stk';
+    bar.innerHTML='<div class="bbs-p"><div class="bbs-o"></div><div class="bbs-n"></div></div>'+
+      '<button type="button" class="bbs-b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+
+      '<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h2.6l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h8.6a1.6 1.6 0 0 0 1.6-1.2l1.7-7.3H6"/></svg><span>Sepete Ekle</span></button>';
+    bar.querySelector('.bbs-b').addEventListener('click',function(){
+      var b=document.querySelector('.bbpd-sb'); if(b) b.click();
+    });
+    document.body.appendChild(bar);
+  }
+  function sync(){
+    if(!isPD()) return;
+    var b=document.querySelector('.bbpd-sb');
+    if(!b){ H.classList.remove('bbstk'); return; }          /* tukendi / buton yok: bar yok */
+    var p=prices(); if(!p.cur){ return; }
+    if(!bar) build();
+    var key=p.cur+'|'+(p.old||''); if(key!==last){
+      last=key;
+      bar.querySelector('.bbs-n').textContent=fmt(p.cur);
+      var o=bar.querySelector('.bbs-o');
+      if(p.old){ var pct=Math.round((1-num(p.cur)/num(p.old))*100);
+        o.innerHTML=(pct>0?'<span class="bbs-r">%'+pct+'</span>':'')+'<s></s>'; o.querySelector('s').textContent=fmt(p.old);
+      } else o.innerHTML='';
+    }
+    H.classList.add('bbstk');
+  }
+  function run(){ try{sync();}catch(e){} }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  window.addEventListener('load',function(){
+    run(); setTimeout(run,800); setTimeout(run,2000);
+    if(isPD()) setInterval(run,1500);                         /* fiyat/stok degisirse bar guncellenir */
+  });
 })();
