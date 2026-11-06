@@ -13,11 +13,11 @@
      - bb-bc    : kategori silsilesi + Onceki Sayfaya Don
      - bb-mob   : mobil duzeltmeler (urun gorseli, Sepete Ekle satiri,
                   kategori/arama siralama paneli)
-     - bb-stk   : UYGULAMA urun sayfasi sabit alt bar (fiyat + favori + Sepete Ekle)
+     - bb-stk   : UYGULAMA urun sayfasi sabit alt bar (fiyat + adet + favori + Sepete Ekle)
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v10 (v9 + uygulamada fiyat, favori kalbi ve Sepete Ekle
-              yalnizca sabit alt barda; sayfadakiler gizlendi; buton
-              kucultuldu; iOS uygulamasinda yazilar %87)
+   Surum    : v11 (v10 + uygulamada adet (- 1 +) ve favori kalbi sabit
+              barda fiyat ile Sepete Ekle arasinda; sayfadaki adet satiri
+              gizlendi; fiyat ve Sepete Ekle biraz kuculdu)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -941,10 +941,10 @@
      ve 991px ve alti ekranlarda calisir; web sitesi (masaustu ve mobil) degismez.
      Urun sayfasinin altina, sayfa ne kadar kaydirilirsa kaydirilsin sabit duran
      bir bar ekler: solda fiyat (indirim varsa ustu cizili eski fiyat + yuzde
-     rozeti), ortada favori kalbi, sagda turuncu Sepete Ekle butonu.
-     Fiyat, kalp ve Sepete Ekle YALNIZCA bu barda gorunur; sayfadaki asillari
-     gizlenir ama yerinde durur: bar Ticimax'in asil butonlarina basar. Adet,
-     sayfadaki adet kutusundan okunur; stok, fiyat, kampanya, favori ve sepet
+     rozeti), ortada adet (- 1 +) ve favori kalbi, sagda turuncu Sepete Ekle.
+     Fiyat, adet, kalp ve Sepete Ekle YALNIZCA bu barda gorunur; sayfadaki asillari
+     gizlenir ama yerinde durur: bar Ticimax'in asil butonlarina basar (adetin
+     -/+ butonlari dahil); stok, fiyat, kampanya, favori ve sepet
      islemleri tamamen Ticimax'ta kalir. Urun tukendiyse bar cikmaz, sayfa
      oldugu gibi kalir.
      iOS uygulamasinda yazilar %87 boyutunda gosterilir (Android'de ayni
@@ -961,27 +961,33 @@
   var css=(/BenceBuradaApp\/[\d.]+ \(iOS\)/i.test(UA)?'html.bbapp{-webkit-text-size-adjust:87%!important;text-size-adjust:87%!important}':'')+
     '@media '+MQ+'{'+
     '#bb-stk{position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:#fff;border-top:1px solid #e3e7ee;box-shadow:0 -4px 16px rgba(30,42,59,.08);'+
-      'padding:9px 12px calc(9px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;box-sizing:border-box;font-family:inherit}'+
+      'padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:7px;box-sizing:border-box;font-family:inherit}'+
     'html:not(.bbstk) #bb-stk{display:none}'+
     '#bb-stk .bbs-p{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;line-height:1.15}'+
-    '#bb-stk .bbs-o{display:flex;align-items:center;gap:5px;font-size:12.5px;color:#6b7585}'+
+    '#bb-stk .bbs-o{display:flex;align-items:center;gap:4px;font-size:11.5px;color:#6b7585}'+
     '#bb-stk .bbs-o s{white-space:nowrap}'+
-    '#bb-stk .bbs-r{background:#d93025;color:#fff;font-weight:700;font-size:11px;border-radius:4px;padding:1px 5px}'+
-    '#bb-stk .bbs-n{font-size:20px;font-weight:800;color:#1e2a3b;white-space:nowrap}'+
+    '#bb-stk .bbs-r{background:#d93025;color:#fff;font-weight:700;font-size:10.5px;border-radius:4px;padding:1px 4px}'+
+    '#bb-stk .bbs-n{font-size:17px;font-weight:800;color:#1e2a3b;white-space:nowrap}'+
     '#bb-stk .bbs-o:empty{display:none}'+
     '#bb-stk .bbs-o:not(:empty)+.bbs-n{color:#d93025}'+
-    '#bb-stk .bbs-f{flex:0 0 44px;width:44px;height:44px;border:1px solid #e3e7ee;border-radius:10px;background:#fff;color:#f39200;display:none;align-items:center;justify-content:center;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}'+
+    '#bb-stk .bbs-q{flex:0 0 auto;height:40px;border:1px solid #e3e7ee;border-radius:10px;display:none;align-items:center;overflow:hidden;background:#fff}'+
+    '#bb-stk.bbs-hq .bbs-q{display:flex}'+
+    '#bb-stk .bbs-q button{width:27px;height:100%;border:0;background:none;color:#1e2a3b;font-size:18px;line-height:1;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit}'+
+    '#bb-stk .bbs-q button:active{background:#eef0f3}'+
+    '#bb-stk .bbs-q span{min-width:22px;text-align:center;font-size:15px;font-weight:700;color:#1e2a3b}'+
+    '#bb-stk .bbs-f{flex:0 0 40px;width:40px;height:40px;border:1px solid #e3e7ee;border-radius:10px;background:#fff;color:#f39200;display:none;align-items:center;justify-content:center;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}'+
     '#bb-stk.bbs-hf .bbs-f{display:flex}'+
-    '#bb-stk .bbs-f svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2}'+
+    '#bb-stk .bbs-f svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}'+
     '#bb-stk .bbs-f.on svg{fill:currentColor}'+
     '#bb-stk .bbs-f:active{transform:scale(.94)}'+
-    '#bb-stk .bbs-b{flex:0 0 auto;height:44px;border:0;border-radius:10px;background:#f39200;color:#fff;font-size:16px;font-weight:700;'+
-      'display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;padding:0 18px;white-space:nowrap}'+
+    '#bb-stk .bbs-b{flex:1 1 auto;min-width:0;height:40px;border:0;border-radius:10px;background:#f39200;color:#fff;font-size:14.5px;font-weight:700;'+
+      'display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;padding:0 8px;white-space:nowrap;overflow:hidden}'+
     '#bb-stk .bbs-b:active{background:#e07f00;transform:scale(.98)}'+
-    '#bb-stk .bbs-b svg{width:19px;height:19px;flex:0 0 19px}'+
-    'html.bbstk body{padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))!important}'+
-    'html.bbstk .bbpd-row>.bbpd-b,html.bbstk .bbpd-row>.bbpd-f,html.bbstk .bbpd-fvw,html.bbstk .bbpd-prw{display:none!important}'+
-    '}@media (max-width:340px){#bb-stk .bbs-n{font-size:18px}#bb-stk .bbs-b{font-size:15px;padding:0 12px}}';
+    '#bb-stk .bbs-b svg{width:17px;height:17px;flex:0 0 17px}'+
+    'html.bbstk body{padding-bottom:calc(66px + env(safe-area-inset-bottom,0px))!important}'+
+    'html.bbstk .bbpd-row,html.bbstk .bbpd-fvw,html.bbstk .bbpd-prw{display:none!important}'+
+    '}@media (max-width:389px){#bb-stk{gap:6px;padding-left:8px;padding-right:8px}#bb-stk .bbs-b svg{display:none}#bb-stk .bbs-n{font-size:16px}#bb-stk .bbs-q button{width:24px}}'+
+    '@media (max-width:339px){#bb-stk .bbs-o{display:none}#bb-stk .bbs-b{font-size:13.5px}}';
   var st=document.createElement('style'); st.id='bb-stk-css'; st.textContent=css;
   (document.head||H).appendChild(st);
 
@@ -1031,18 +1037,50 @@
   }
 
   var bar=null, last='', favState=null, favT=0;
+  var QI='input[type=text],input[type=number],input[type=tel],input:not([type])';
+  /* adet: sayfadaki asil adet kutusu ve onun -/+ butonlari */
+  function qInp(){ var q=document.querySelector('.bbpd-qbox'); return q?q.querySelector(QI):null; }
+  function qBtns(){
+    var q=document.querySelector('.bbpd-qbox'), inp=qInp(); if(!q||!inp) return null;
+    var c=[].filter.call(q.querySelectorAll('a,button,span,i,div,input[type=button]'),function(e){
+      if(e===inp||e.contains(inp)) return false;
+      if(e.querySelector('a,button,input[type=button]')) return false;
+      var t=(e.value||txt(e)).trim(); return /^[-−–+]$/.test(t)||/azalt|eksi|minus|arttir|artir|art[ıi]r|plus|arti/i.test(e.className+' '+(e.getAttribute('title')||''));
+    });
+    var m=null,pl=null;
+    c.forEach(function(e){ var t=(e.value||txt(e)).trim(), k=e.className+' '+(e.getAttribute('title')||'');
+      if(/^[-−–]$/.test(t)||/azalt|eksi|minus/i.test(k)){ if(!m) m=e; } else if(!pl) pl=e; });
+    return {m:m,p:pl};
+  }
+  function qVal(){ var i=qInp(); var v=i?parseInt(i.value,10):1; return v>0?v:1; }
+  function showQ(){ if(bar) bar.querySelector('.bbs-q span').textContent=qVal(); }
+  function step(d){
+    var inp=qInp(); if(!inp) return;
+    var before=qVal(), b=qBtns(), el=b&&(d<0?b.m:b.p);
+    if(el){ (el.closest('a,button')||el).click(); }
+    setTimeout(function(){
+      if(qVal()===before){                                    /* buton yoksa / tepki vermediyse kutuya yaz */
+        var v=Math.max(1,before+d); if(v===before) return;
+        inp.value=v; ['input','change','keyup'].forEach(function(n){ inp.dispatchEvent(new Event(n,{bubbles:true})); });
+      }
+      showQ();
+    },60);
+  }
   function build(){
     bar=document.createElement('div'); bar.id='bb-stk';
     bar.innerHTML='<div class="bbs-p"><div class="bbs-o"></div><div class="bbs-n"></div></div>'+
+      '<div class="bbs-q"><button type="button" class="bbs-m" aria-label="Azalt">&minus;</button><span>1</span><button type="button" class="bbs-pl" aria-label="Arttir">+</button></div>'+
       '<button type="button" class="bbs-f" aria-label="Favorilere ekle"><svg viewBox="0 0 24 24"><path stroke-linejoin="round" d="M12 20.5s-7.5-4.6-9.2-9.3C1.6 7.8 3.9 4.5 7.3 4.5c2 0 3.6 1.1 4.7 2.7 1.1-1.6 2.7-2.7 4.7-2.7 3.4 0 5.7 3.3 4.5 6.7-1.7 4.7-9.2 9.3-9.2 9.3z"/></svg></button>'+
       '<button type="button" class="bbs-b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+
       '<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h2.6l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h8.6a1.6 1.6 0 0 0 1.6-1.2l1.7-7.3H6"/></svg><span>Sepete Ekle</span></button>';
     bar.querySelector('.bbs-b').addEventListener('click',function(){
       var b=document.querySelector('.bbpd-sb'); if(b) b.click();
     });
+    bar.querySelector('.bbs-m').addEventListener('click',function(){ step(-1); });
+    bar.querySelector('.bbs-pl').addEventListener('click',function(){ step(1); });
     bar.querySelector('.bbs-f').addEventListener('click',function(){
       var fv=document.querySelector('.bbpd-fv'); if(!fv) return;
-      var a=fv.matches('a,button')?fv:(fv.querySelector('a,button')||fv); a.click();
+      var a=fv.matches('a,button')?fv:(fv.querySelector('a,button')||fv); a.click();   /* gizli olsa da asil kalp calisir */
       favState=!favState; favT=Date.now(); this.classList.toggle('on',favState);
     });
     document.body.appendChild(bar);
@@ -1062,7 +1100,9 @@
       } else o.innerHTML='';
     }
     markPrice(p.ce); markPrice(p.oe);
+    if(qInp()){ bar.classList.add('bbs-hq'); if(document.activeElement!==qInp()) showQ(); }
     var fv=document.querySelector('.bbpd-fv');
+    if(!fv){ var rw=document.querySelector('.bbpd-row'); fv=rw&&rw.querySelector('.bbpd-f'); if(fv) fv.classList.add('bbpd-fv'); }
     if(fv){
       bar.classList.add('bbs-hf');
       var row=document.querySelector('.bbpd-row'), w=fv;
