@@ -14,10 +14,11 @@
      - bb-mob   : mobil duzeltmeler (urun gorseli, Sepete Ekle satiri,
                   kategori/arama siralama paneli)
      - bb-stk   : UYGULAMA urun sayfasi sabit alt bar (fiyat + adet + favori + Sepete Ekle)
+     - bb-tab   : UYGULAMA sabit alt menu (Anasayfa/Kategoriler/Sepetim/Favoriler/Hesabim)
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v13 (v12 + uygulamada Sepete Ekle telefonda da calisir: Ticimax'in
-              "surukleme" bayragi sifirlanir, istek gitmezse dogrudan eklenir;
-              "Eklendi" sunucu cevabina gore gosterilir)
+   Surum    : v14 (v13 + uygulamada her sayfada sabit alt menu: Anasayfa,
+              Kategoriler, Sepetim (rozetli), Favoriler (rozetli), Hesabim;
+              urun ve sepet/odeme sayfalarinda gizlenir)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -677,7 +678,7 @@
     var homes=document.querySelectorAll('a'), home=null;
     for(var i=0;i<homes.length;i++){
       var a=homes[i]; if(txt(a)!=='Anasayfa'||!vis(a)) continue;
-      if(a.closest('footer,[class*=footer],[id*=footer],header,[class*=header],[id*=header],.bb-accmenu')) continue;
+      if(a.closest('footer,[class*=footer],[id*=footer],header,[class*=header],[id*=header],.bb-accmenu,#bb-tab,#bb-stk')) continue;   /* uygulama alt menusu silsile degildir */
       home=a; break;
     }
     if(!home) return;
@@ -1182,4 +1183,107 @@
     run(); setTimeout(run,800); setTimeout(run,2000);
     if(isPD()) setInterval(run,1500);                         /* fiyat/stok degisirse bar guncellenir */
   });
+})();
+
+/* ===== bb-tab: UYGULAMA sabit alt menu (Anasayfa / Kategoriler / Sepetim / Favoriler / Hesabim) =====
+   Ne yapar : YALNIZCA mobil uygulamada (kullanici ajaninda "BenceBuradaApp" varsa)
+     ekranin altina her sayfada sabit duran 5 sekmeli bir menu ekler:
+       Anasayfa   -> /
+       Kategoriler-> sitenin kendi mobil kategori menusunu acar
+       Sepetim    -> sitenin kendi sepet panelini acar (sepet adedi rozetle)
+       Favoriler  -> /Hesabim.aspx#/Favorilerim (favori adedi rozetle)
+       Hesabim    -> /Hesabim
+     Bulunulan sayfanin sekmesi turuncu yanar. Urun sayfasinda gizlenir (orada
+     fiyat + Sepete Ekle bari var), sepet/odeme sayfalarinda da gizlenir.
+     Sayfadaki "yukari cik" butonu menunun ustune tasinir.
+   Nerede   : bb-site.js (Script Yonetimi > Tum Sayfalar - Header).
+   Kaldirmak: Bu blogu bb-site.js'ten silmek. Web sitesine dokunmaz.
+   ============================================================== */
+(function(){
+  if(window.__bbtab) return; window.__bbtab=1;
+  if(!/BenceBuradaApp/i.test(navigator.userAgent||'')) return;      /* yalnizca mobil uygulamada */
+  var H=document.documentElement;
+  var css='@media (max-width:991px){'+
+    '#bb-tab{position:fixed;left:0;right:0;bottom:0;z-index:2147482000;background:#fff;border-top:1px solid #e3e7ee;box-shadow:0 -2px 12px rgba(30,42,59,.06);'+
+      'display:flex;padding:0 0 env(safe-area-inset-bottom,0px);box-sizing:border-box;font-family:inherit}'+
+    'html:not(.bbtab) #bb-tab{display:none}'+
+    '#bb-tab a{flex:1 1 0;min-width:0;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#6b7585;text-decoration:none;'+
+      'font-size:11px;font-weight:600;line-height:1;-webkit-tap-highlight-color:transparent;position:relative}'+
+    '#bb-tab a:active{background:#f6f7f9}'+
+    '#bb-tab a.on{color:#f39200}'+
+    '#bb-tab svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}'+
+    '#bb-tab a.on svg{stroke-width:2.2}'+
+    '#bb-tab .bbt-i{position:relative;display:block;height:24px}'+
+    '#bb-tab .bbt-n{position:absolute;top:-5px;left:15px;min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#d93025;color:#fff;'+
+      'font-size:10.5px;font-weight:700;line-height:17px;text-align:center;border:1.5px solid #fff}'+
+    '#bb-tab .bbt-n:empty{display:none}'+
+    'html.bbtab body{padding-bottom:calc(60px + env(safe-area-inset-bottom,0px))!important}'+
+    'html.bbtab #back-to-top{bottom:calc(70px + env(safe-area-inset-bottom,0px))!important}'+
+    'html.bbstk #back-to-top{bottom:calc(72px + env(safe-area-inset-bottom,0px))!important}'+
+    'html.bbtab:has(#bbYakinda.acik) #bb-tab{display:none}'+
+    '}';
+  var st=document.createElement('style'); st.id='bb-tab-css'; st.textContent=css;
+  (document.head||H).appendChild(st);
+
+  var I={
+    ev:'<path d="M3.5 10.5 12 3.8l8.5 6.7"/><path d="M5.8 9v10.2h4.4v-5.6h3.6v5.6h4.4V9"/>',
+    kat:'<rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>',
+    sep:'<circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/><path d="M2.5 3.5h2.6l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h8.6a1.6 1.6 0 0 0 1.6-1.2l1.7-7.3H6"/>',
+    fav:'<path d="M12 20.5s-7.5-4.6-9.2-9.3C1.6 7.8 3.9 4.5 7.3 4.5c2 0 3.6 1.1 4.7 2.7 1.1-1.6 2.7-2.7 4.7-2.7 3.4 0 5.7 3.3 4.5 6.7-1.7 4.7-9.2 9.3-9.2 9.3z"/>',
+    hes:'<circle cx="12" cy="8.2" r="4"/><path d="M4.5 20.5c.8-3.9 3.9-6.2 7.5-6.2s6.7 2.3 7.5 6.2"/>'
+  };
+  var T=[
+    ['ev','Anasayfa','/'],
+    ['kat','Kategoriler','#'],
+    ['sep','Sepetim','#'],
+    ['fav','Favoriler','/Hesabim.aspx#/Favorilerim'],
+    ['hes','Hesab\u0131m','/Hesabim']
+  ];
+  function txt(e){return (e.textContent||'').replace(/\s+/g,' ').trim();}
+  function num(sel){ var e=document.querySelector(sel); if(!e) return ''; var m=txt(e).match(/\d+/); var n=m?parseInt(m[0],10):0; return n>0?(n>99?'99+':String(n)):''; }
+  function gizle(){
+    if(document.body.classList.contains('ProductBody')) return true;                 /* urun sayfasi: Sepete Ekle bari var */
+    return /\/(sepet|odeme|siparis-?tamam|SiparisTamam|Odeme|Sepet)/i.test(location.pathname);
+  }
+  function aktif(){
+    var p=location.pathname.toLowerCase(), h=location.hash.toLowerCase();
+    if(p==='/'||p==='/default.aspx') return 'ev';
+    if(p.indexOf('/hesabim')===0) return /favori/.test(h)?'fav':'hes';
+    return '';
+  }
+  var bar=null;
+  function build(){
+    bar=document.createElement('nav'); bar.id='bb-tab'; bar.setAttribute('aria-label','Uygulama menusu');
+    bar.innerHTML=T.map(function(t){
+      return '<a href="'+t[2]+'" data-t="'+t[0]+'"><span class="bbt-i"><svg viewBox="0 0 24 24">'+I[t[0]]+'</svg>'+
+        (t[0]==='sep'||t[0]==='fav'?'<span class="bbt-n"></span>':'')+'</span><span>'+t[1]+'</span></a>';
+    }).join('');
+    bar.querySelector('[data-t=kat]').addEventListener('click',function(ev){
+      ev.preventDefault();
+      var b=document.querySelector('.mobile-menu-item .newMenuBtnClick')||document.querySelector('.mobile-menu-item')||document.querySelector('.newMenuBtnClick');
+      if(b) b.click(); else location.href='/';
+    });
+    bar.querySelector('[data-t=sep]').addEventListener('click',function(ev){
+      ev.preventDefault();
+      var l=document.querySelector('.header-cart-link');
+      try{ if(window.cart&&window.cart.render&&window.cart.render.rightSide){ window.cart.render.rightSide(); return; } }catch(e){}
+      if(l) l.click(); else location.href='/Sepetim';
+    });
+    bar.querySelector('[data-t=fav]').addEventListener('click',function(){ setTimeout(sync,300); });
+    document.body.appendChild(bar);
+  }
+  function sync(){
+    if(!document.body) return;
+    if(gizle()){ H.classList.remove('bbtab'); return; }
+    if(!bar) build();
+    var a=aktif();
+    [].forEach.call(bar.querySelectorAll('a'),function(x){ x.classList.toggle('on',x.getAttribute('data-t')===a); });
+    bar.querySelector('[data-t=sep] .bbt-n').textContent=num('.sepetUrunSayisi');
+    bar.querySelector('[data-t=fav] .bbt-n').textContent=num('.favori-link');
+    H.classList.add('bbtab');
+  }
+  function run(){ try{sync();}catch(e){} }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  window.addEventListener('load',function(){ run(); setTimeout(run,1000); setInterval(run,2000); });   /* rozetler guncel kalir */
+  window.addEventListener('hashchange',run);
 })();
