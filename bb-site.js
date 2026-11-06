@@ -15,10 +15,10 @@
                   kategori/arama siralama paneli)
      - bb-stk   : UYGULAMA urun sayfasi sabit alt bar (fiyat + adet + favori + Sepete Ekle)
      - bb-tab   : UYGULAMA sabit alt menu (Anasayfa/Kategoriler/Sepetim/Favoriler/Hesabim)
+     - bb-hes   : UYGULAMA Hesabim ana ekrani (Trendyol tarzi kartlar)
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v14 (v13 + uygulamada her sayfada sabit alt menu: Anasayfa,
-              Kategoriler, Sepetim (rozetli), Favoriler (rozetli), Hesabim;
-              urun ve sepet/odeme sayfalarinda gizlenir)
+   Surum    : v15 (v14 + uygulamada alt menudeki Hesabim kartli ana ekran
+              acar: profil karti, 4'lu kisayol, kutucuklar ve Hesabim listesi)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -1248,6 +1248,7 @@
   function aktif(){
     var p=location.pathname.toLowerCase(), h=location.hash.toLowerCase();
     if(p==='/'||p==='/default.aspx') return 'ev';
+    if(H.classList.contains('bbhes')) return 'hes';
     if(p.indexOf('/hesabim')===0) return /favori/.test(h)?'fav':'hes';
     return '';
   }
@@ -1270,6 +1271,9 @@
       if(l) l.click(); else location.href='/Sepetim';
     });
     bar.querySelector('[data-t=fav]').addEventListener('click',function(){ setTimeout(sync,300); });
+    bar.querySelector('[data-t=hes]').addEventListener('click',function(ev){
+      if(typeof window.bbHesabimAc==='function'){ ev.preventDefault(); window.bbHesabimAc(); setTimeout(sync,50); }   /* kartli Hesabim ekrani */
+    });
     document.body.appendChild(bar);
   }
   function sync(){
@@ -1286,4 +1290,166 @@
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
   window.addEventListener('load',function(){ run(); setTimeout(run,1000); setInterval(run,2000); });   /* rozetler guncel kalir */
   window.addEventListener('hashchange',run);
+})();
+
+/* ===== bb-hes: UYGULAMA Hesabim ana ekrani (Trendyol tarzi kartlar) =====
+   Ne yapar : YALNIZCA mobil uygulamada, alt menudeki "Hesabim"a basinca (ya da
+     /Hesabim sayfasi ilk acildiginda) sitenin liste gorunumlu Hesabim sayfasinin
+     ustune kart tasarimli bir ana ekran acar:
+       - profil karti (bas harfli avatar, ad soyad, e-posta, Bilgilerimi Duzenle)
+       - 4'lu kisayol: Siparislerim / Favorilerim / Hediye Ceklerim / Sepetim
+       - 2 kutucuk: Tum Siparislerim (kargo takibi) / Adres Defterim
+       - "Hesabim" listesi: Uyelik Bilgilerim, Adres Defterim, Cikis Yap
+     Bir kutucuga basinca sitenin kendi ilgili sayfasi acilir; geri tusu ana
+     ekrana dondurur. Uyelik islemleri tamamen Ticimax'ta kalir.
+   Nerede   : bb-site.js (Script Yonetimi > Tum Sayfalar - Header).
+   Kaldirmak: Bu blogu bb-site.js'ten silmek. Web sitesine dokunmaz.
+   ============================================================== */
+(function(){
+  if(window.__bbhes) return; window.__bbhes=1;
+  if(!/BenceBuradaApp/i.test(navigator.userAgent||'')) return;      /* yalnizca mobil uygulamada */
+  var H=document.documentElement, KEY='bbHesAc';
+  var css='@media (max-width:991px){'+
+    '#bb-hes{position:fixed;left:0;right:0;top:0;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:2147481000;background:#f4f5f7;overflow-y:auto;'+
+      '-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:calc(14px + env(safe-area-inset-top,0px)) 12px 18px;box-sizing:border-box;font-family:inherit;color:#1e2a3b;display:none}'+
+    'html.bbhes #bb-hes{display:block}'+
+    'html.bbhes body{overflow:hidden!important}'+
+    '#bb-hes *{box-sizing:border-box}'+
+    '#bb-hes a{text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent}'+
+    '#bb-hes .bh-card{background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(30,42,59,.05);margin:0 0 12px}'+
+    '#bb-hes .bh-pro{display:flex;align-items:center;gap:14px;padding:18px 16px}'+
+    '#bb-hes .bh-av{flex:0 0 64px;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#f7a21b,#e07f00);color:#fff;font-size:24px;font-weight:800;'+
+      'display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px #fff4e5}'+
+    '#bb-hes .bh-av svg{width:32px;height:32px;fill:none;stroke:#fff;stroke-width:2}'+
+    '#bb-hes .bh-who{min-width:0;flex:1}'+
+    '#bb-hes .bh-ad{font-size:19px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+    '#bb-hes .bh-mail{font-size:13px;color:#6b7585;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+    '#bb-hes .bh-mail:empty{display:none}'+
+    '#bb-hes .bh-ed{display:inline-flex;align-items:center;gap:4px;margin-top:9px;background:#fff4e5;color:#e07f00;font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px}'+
+    '#bb-hes .bh-grid{display:grid;grid-template-columns:repeat(4,1fr);padding:14px 4px}'+
+    '#bb-hes .bh-g{display:flex;flex-direction:column;align-items:center;gap:7px;padding:4px 2px;text-align:center;font-size:12.5px;font-weight:600;line-height:1.2;position:relative}'+
+    '#bb-hes .bh-g+.bh-g::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:1px;background:#eef0f3}'+
+    '#bb-hes .bh-g svg{width:28px;height:28px}'+
+    '#bb-hes svg{fill:none;stroke:#f39200;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}'+
+    '#bb-hes .bh-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}'+
+    '#bb-hes .bh-t{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(30,42,59,.05);display:flex;align-items:center;gap:10px;padding:15px 12px;font-size:14.5px;font-weight:600;line-height:1.25}'+
+    '#bb-hes .bh-t svg{width:26px;height:26px;flex:0 0 26px}'+
+    '#bb-hes .bh-t span{flex:1;min-width:0}'+
+    '#bb-hes .bh-ok{width:16px!important;height:16px!important;flex:0 0 16px!important;stroke:#b4bcc8!important;stroke-width:2.4!important}'+
+    '#bb-hes .bh-h{font-size:18px;font-weight:800;padding:16px 16px 12px;border-bottom:1px solid #eef0f3}'+
+    '#bb-hes .bh-l{display:flex;align-items:center;gap:14px;padding:15px 16px;font-size:15px;font-weight:500}'+
+    '#bb-hes .bh-l+.bh-l{border-top:1px solid #f2f3f6}'+
+    '#bb-hes .bh-l svg{width:22px;height:22px;flex:0 0 22px}'+
+    '#bb-hes .bh-l span{flex:1}'+
+    '#bb-hes .bh-l .bh-ok{width:24px!important;height:24px!important;flex:0 0 24px!important;background:#eef3fd;border-radius:50%;padding:5px;stroke:#5b7fdb!important}'+
+    '#bb-hes .bh-out,#bb-hes .bh-out svg{color:#d93025;stroke:#d93025}'+
+    '#bb-hes .bh-v{text-align:center;color:#a0a8b4;font-size:12px;margin:6px 0 4px}'+
+    '#bb-hes a:active{opacity:.6}'+
+    '}';
+  var st=document.createElement('style'); st.id='bb-hes-css'; st.textContent=css;
+  (document.head||H).appendChild(st);
+
+  var I={
+    sip:'<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/>',
+    fav:'<path d="M12 20.5s-7.5-4.6-9.2-9.3C1.6 7.8 3.9 4.5 7.3 4.5c2 0 3.6 1.1 4.7 2.7 1.1-1.6 2.7-2.7 4.7-2.7 3.4 0 5.7 3.3 4.5 6.7-1.7 4.7-9.2 9.3-9.2 9.3z"/>',
+    cek:'<path d="M3.5 9V6.5a1 1 0 0 1 1-1h15a1 1 0 0 1 1 1V9a2.5 2.5 0 0 0 0 5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1V14a2.5 2.5 0 0 0 0-5z"/><path d="M14.5 6v12" stroke-dasharray="2 2"/>',
+    sep:'<circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/><path d="M2.5 3.5h2.6l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h8.6a1.6 1.6 0 0 0 1.6-1.2l1.7-7.3H6"/>',
+    kar:'<path d="M2.5 6.5h11v9h-11z"/><path d="M13.5 9.5h4l3 3v3h-7z"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
+    adr:'<path d="M12 21s-6.5-6.1-6.5-11a6.5 6.5 0 0 1 13 0c0 4.9-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
+    uye:'<circle cx="12" cy="8.2" r="4"/><path d="M4.5 20.5c.8-3.9 3.9-6.2 7.5-6.2s6.7 2.3 7.5 6.2"/>',
+    cik:'<path d="M14 4.5h4.5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H14"/><path d="M10 8l-4 4 4 4M6 12h10"/>',
+    ok:'<path d="m9 6 6 6-6 6"/>'
+  };
+  function ic(k,c){ return '<svg viewBox="0 0 24 24"'+(c?' class="'+c+'"':'')+'>'+I[k]+'</svg>'; }
+  function txt(e){return (e.textContent||'').replace(/\s+/g,' ').trim();}
+
+  /* ad ve e-posta: sayfada gorunen "Merhaba / Hos geldin <Ad>" ve e-posta metninden okunur */
+  function kim(){
+    var ad='', mail='', t='';
+    var L='A-Za-z\u00c7\u011e\u0130\u00d6\u015e\u00dc\u00e7\u011f\u0131\u00f6\u015f\u00fc';
+    var RX=new RegExp('(?:Merhaba|Ho\u015f ?geldin(?:iz)?)[,!:\\s]+(['+L+']+(?:[ \\u00a0]['+L+']+){0,2})');
+    if(document.body){
+      var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null), n;
+      while((n=w.nextNode())){
+        var pe=n.parentElement; if(!pe||pe.closest('#bb-hes,#bb-tab,#bb-stk,script,style')) continue;
+        var v=n.nodeValue; if(/@/.test(v)) t+=' '+v;
+        if(!ad && /Merhaba|Ho\u015f ?geldin/.test(v)){
+          var m=(pe.innerText||v).split('\n').join(' | ').match(RX);   /* yalnizca ayni satirdaki kelimeler */
+          if(m) ad=m[1].replace(/\u00a0/g,' ').trim();
+        }
+      }
+    }
+    var inp=document.querySelectorAll('input[type=email],input[name*=mail i],input[id*=mail i]');
+    for(var i=0;i<inp.length;i++){ if(/@/.test(inp[i].value)){ mail=inp[i].value; break; } }
+    if(!mail){ var e=t.match(/[\w.+-]+@[\w-]+\.[\w.]+/); if(e && !/benceburada/i.test(e[0])) mail=e[0]; }
+    try{ if(ad) sessionStorage.setItem('bbHesAd',ad); else ad=sessionStorage.getItem('bbHesAd')||'';
+         if(mail) sessionStorage.setItem('bbHesMail',mail); else mail=sessionStorage.getItem('bbHesMail')||''; }catch(x){}
+    return {ad:ad,mail:mail};
+  }
+  function harf(ad){ var p=ad.split(' ').filter(Boolean); return ((p[0]||'')[0]||'')+((p.length>1?p[p.length-1]:'')[0]||''); }
+
+  var box=null, acilisHash=null;
+  var R='/Hesabim.aspx#/';
+  function build(){
+    box=document.createElement('div'); box.id='bb-hes';
+    box.innerHTML=
+      '<div class="bh-card bh-pro"><div class="bh-av"></div><div class="bh-who"><div class="bh-ad">Hesab\u0131m</div><div class="bh-mail"></div>'+
+        '<a class="bh-ed" data-h="Uyelik-Bilgilerim">Bilgilerimi D\u00fczenle '+ic('ok','bh-ok')+'</a></div></div>'+
+      '<div class="bh-card bh-grid">'+
+        '<a class="bh-g" data-h="Siparislerim">'+ic('sip')+'Sipari\u015flerim</a>'+
+        '<a class="bh-g" data-h="Favorilerim">'+ic('fav')+'Favorilerim</a>'+
+        '<a class="bh-g" data-h="HediyeCeklerim">'+ic('cek')+'Hediye \u00c7eklerim</a>'+
+        '<a class="bh-g" data-sep="1">'+ic('sep')+'Sepetim</a>'+
+      '</div>'+
+      '<div class="bh-tiles">'+
+        '<a class="bh-t" data-h="Siparislerim">'+ic('kar')+'<span>Kargom Nerede?</span>'+ic('ok','bh-ok')+'</a>'+
+        '<a class="bh-t" data-h="AdresDefterim">'+ic('adr')+'<span>Adres Defterim</span>'+ic('ok','bh-ok')+'</a>'+
+      '</div>'+
+      '<div class="bh-card"><div class="bh-h">Hesab\u0131m</div>'+
+        '<a class="bh-l" data-h="Uyelik-Bilgilerim">'+ic('uye')+'<span>\u00dcyelik Bilgilerim</span>'+ic('ok','bh-ok')+'</a>'+
+        '<a class="bh-l" data-h="Siparislerim">'+ic('sip')+'<span>T\u00fcm Sipari\u015flerim</span>'+ic('ok','bh-ok')+'</a>'+
+        '<a class="bh-l" data-h="AdresDefterim">'+ic('adr')+'<span>Adres Defterim</span>'+ic('ok','bh-ok')+'</a>'+
+        '<a class="bh-l bh-out" href="/UyeCikis.ashx">'+ic('cik')+'<span>\u00c7\u0131k\u0131\u015f Yap</span></a>'+
+      '</div>'+
+      '<div class="bh-v">Bence Burada</div>';
+    box.addEventListener('click',function(ev){
+      var a=ev.target.closest('a'); if(!a||a.classList.contains('bh-out')) return;
+      ev.preventDefault();
+      if(a.getAttribute('data-sep')){
+        try{ if(window.cart&&window.cart.render&&window.cart.render.rightSide){ kapat(); window.cart.render.rightSide(); return; } }catch(e){}
+        var l=document.querySelector('.header-cart-link'); kapat(); if(l) l.click(); return;
+      }
+      var h=a.getAttribute('data-h');
+      if(location.pathname.toLowerCase().indexOf('/hesabim')===0){ kapat(); location.hash='#/'+h; }   /* ayni sayfa: Ticimax kendi bolumunu acar */
+      else location.href=R+h;
+    });
+    document.body.appendChild(box);
+  }
+  function doldur(){
+    var k=kim(), av=box.querySelector('.bh-av');
+    box.querySelector('.bh-ad').textContent=k.ad||'Ho\u015f geldin \ud83d\udc4b';
+    box.querySelector('.bh-mail').textContent=k.mail;
+    var h=harf(k.ad).toLocaleUpperCase('tr-TR');
+    if(h) av.textContent=h; else av.innerHTML=ic('uye');
+  }
+  function ac(){ if(!box) build(); acilisHash=location.hash; doldur(); H.classList.add('bbhes'); box.scrollTop=0; }
+  function kapat(){ H.classList.remove('bbhes'); }
+  function hesapSayfasi(){ return location.pathname.toLowerCase().indexOf('/hesabim')===0; }
+  window.bbHesabimAc=function(){
+    if(hesapSayfasi()){ ac(); return; }
+    try{ sessionStorage.setItem(KEY,'1'); }catch(e){}
+    location.href='/Hesabim';
+  };
+  function ilk(){
+    if(!document.body||!hesapSayfasi()) return;
+    var f=null; try{ f=sessionStorage.getItem(KEY); sessionStorage.removeItem(KEY); }catch(e){}
+    var h=(location.hash||'').replace(/^#\/?/,'');
+    if(f || !h) ac();                                          /* alt menuden geldi ya da alt sayfa secilmemis */
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',ilk); else ilk();
+  window.addEventListener('load',function(){ if(H.classList.contains('bbhes')) doldur(); setTimeout(function(){ if(box&&H.classList.contains('bbhes')) doldur(); },1500); });
+  window.addEventListener('hashchange',function(){
+    if(!hesapSayfasi()) return;
+    if(acilisHash!==null && location.hash===acilisHash) ac(); else kapat();     /* geri tusu: ana ekrana don */
+  });
 })();
