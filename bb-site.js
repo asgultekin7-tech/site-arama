@@ -16,9 +16,12 @@
      - bb-stk   : UYGULAMA urun sayfasi sabit alt bar (fiyat + adet + favori + Sepete Ekle)
      - bb-tab   : UYGULAMA sabit alt menu (Anasayfa/Kategoriler/Sepetim/Favoriler/Hesabim)
      - bb-hes   : UYGULAMA Hesabim ana ekrani (Trendyol tarzi kartlar)
+     - bb-tks   : urun sayfasi taksit: fiyat alti "3 taksit / vade farksiz"
+                  satiri + "Taksit Secenekleri" sekmesi (kart tablosu) +
+                  sekme alanini "diger parcalar" blogunun ustune alir
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v17 (v16 + alt menude hiz: Anasayfa/Hesabim onceden indirilir,
-              dokununca aninda tepki ve yukleme cizgisi)
+   Surum    : v18 (v17 + bb-tks: urun sayfasi taksit satiri ve
+              Taksit Secenekleri sekmesi; sekmeler diger parcalarin ustunde)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -1523,4 +1526,128 @@
     if(!hesapSayfasi()) return;
     if(anaHash()) ac(); else kapat();                          /* alt sayfaya gidince kapan, geri gelince ac */
   });
+})();
+
+/* ===== bb-tks: urun sayfasi taksit satiri + Taksit Secenekleri sekmesi =====
+   - Fiyatin altindaki Ticimax "...TL'den baslayan taksitlerle" yazisini gizler,
+     yerine "Tum kartlara 3 taksit · Vade farksiz · Taksit Secenekleri >" koyar
+     (linke tiklayinca sayfa sekmeye kayar, tablo acilir).
+   - "Urun Ozellikleri"nin yanina "Taksit Secenekleri" sekmesi ekler: 12 kart
+     programi, Tek Cekim + 3 taksit; tutarlar urun fiyatindan hesaplanir.
+   - Urun Ozellikleri sekme alanini "...icin diger parcalar" (#bbUyumlu) blogunun
+     ustune tasir.
+   Duzenleme: taksit sayisi TAKSIT, kartlar KARTLAR dizisinde.
+   Not: Ticimax sekme ile paneli SIRAYLA eslestirdigi icin yeni panel,
+   Urun Ozellikleri panelinin hemen arkasina konur. */
+(function(){
+  if(window.__bbtks) return; window.__bbtks=1;
+  var TAKSIT=3;
+  var KARTLAR=[
+    ['axess','#111111'],['Advantage','#e2561c'],['QNB','#1a2b5f'],
+    ['Bankkart','#d6001c'],['Bonus','#4caf35'],['Maximum','#e6007e'],
+    ['Paraf','#1aa7e0'],['Sağlam Kart','#0b6b3a'],['World','#6a2c91'],
+    ['Enpara.com','#9b3fb5'],['Miles&amp;Smiles','#c8102e'],['American Express','#1f6fd1']
+  ];
+  var st=document.createElement('style'); st.id='bb-tks';
+  st.textContent=
+    'body.ProductBody #divTaksitAciklama{display:none!important}'+
+    'body.ProductBody #bbUyumlu{clear:both}'+
+    '.bbTkSatir{flex-basis:100%;width:100%;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0 2px;font-size:13px;color:#374151}'+
+    '.bbTkSatir svg{flex:none}'+
+    '.bbTkSatir .bbTk-rozet{padding:2px 9px;font-size:11.5px}'+
+    '.bbTkSatir a{color:#F39200;font-weight:700;text-decoration:none;cursor:pointer}'+
+    '.bbTkSatir a:hover{text-decoration:underline}'+
+    '.bbTk-bas{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;font-size:14px;color:#1f2937}'+
+    '.bbTk-rozet{background:#ecfdf5;color:#15803d;border:1px solid #bbf7d0;border-radius:999px;padding:4px 12px;font-weight:700;font-size:12.5px}'+
+    '.bbTk-tablo{width:100%;max-width:640px;border-collapse:separate;border-spacing:0;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;font-size:13.5px;background:#fff}'+
+    '.bbTk-tablo th{background:#14213d;color:#fff;font-weight:600;text-align:left;padding:10px 14px}'+
+    '.bbTk-tablo th.r,.bbTk-tablo td.r{text-align:right}'+
+    '.bbTk-tablo td{padding:10px 14px;border-top:1px solid #f1f5f9;vertical-align:middle}'+
+    '.bbTk-tablo tr:nth-child(even) td{background:#fafafa}'+
+    '.bbTk-kart{display:inline-block;min-width:118px;font-weight:800;letter-spacing:.2px;font-size:14px}'+
+    '.bbTk-tutar b{color:#111827}'+
+    '.bbTk-tutar small{display:block;color:#6b7280;font-size:11.5px}'+
+    '.bbTk-not{max-width:640px;color:#6b7280;font-size:12px;margin:10px 0 0;line-height:1.5}'+
+    '@media (max-width:600px){.bbTk-tablo{font-size:12.5px}.bbTk-tablo th,.bbTk-tablo td{padding:9px 10px}.bbTk-kart{min-width:0;font-size:13px}}';
+  (document.head||document.documentElement).appendChild(st);
+
+  function fiyatOku(){
+    var el=document.querySelector('.PriceList .spanFiyat'); if(!el) return null;
+    var n=parseFloat(el.textContent.replace(/[^\d,\.]/g,'').replace(/\./g,'').replace(',','.'));
+    return isNaN(n)?null:n;
+  }
+  function tl(n){ return n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' TL'; }
+
+  function kur(){
+    if(window.__bbtksOk) return true;
+    var alan=document.getElementById('divUrunOzellikAlani');
+    var ul=alan&&alan.querySelector('.urunTab ul');
+    if(!alan||!ul) return false;
+    window.__bbtksOk=1;
+    if(document.getElementById('liTabTaksit')) return true;   /* (eski GTM etiketi kurduysa tekrar kurma) */
+    window.__bbTaksit=1;                                        /* eski GTM etiketi sonradan calisirsa kendini atlasin */
+
+    /* sekme + panel */
+    var li=document.createElement('li'); li.id='liTabTaksit'; li.className='TabTaksit';
+    li.innerHTML='<a href="javascript:void(0)">Taksit Seçenekleri</a>';
+    var ilk=document.getElementById('liTabOzellikler');
+    if(ilk&&ilk.nextSibling) ul.insertBefore(li,ilk.nextSibling); else ul.appendChild(li);
+    var pane=document.createElement('div'); pane.id='bbTaksitPane'; pane.className='urunDetayPanel'; pane.style.display='none';
+    var ozp=document.getElementById('divTabOzellikler');
+    if(ozp&&ozp.nextSibling) alan.insertBefore(pane,ozp.nextSibling); else alan.appendChild(pane);
+
+    function tabloYaz(){
+      var f=fiyatOku(), tek=f?tl(f):'-', ay=f?tl(Math.ceil(f/TAKSIT*100)/100):'-';
+      pane.innerHTML='<div class="urunTabAlt">'+
+        '<div class="bbTk-bas"><b>Tüm kartlara '+TAKSIT+' taksit</b><span class="bbTk-rozet">Vade farksız</span></div>'+
+        '<table class="bbTk-tablo"><thead><tr><th>Kart</th><th class="r">Tek Çekim</th><th class="r">'+TAKSIT+' Taksit</th></tr></thead><tbody>'+
+        KARTLAR.map(function(k){
+          return '<tr><td><span class="bbTk-kart" style="color:'+k[1]+'">'+k[0]+'</span></td>'+
+                 '<td class="r bbTk-tutar"><b>'+tek+'</b><small>Tek Çekim</small></td>'+
+                 '<td class="r bbTk-tutar"><b>'+TAKSIT+' x '+ay+'</b><small>Toplam '+tek+'</small></td></tr>';
+        }).join('')+'</tbody></table>'+
+        '<p class="bbTk-not">'+TAKSIT+' taksit, listelenen tüm kartlarda vade farkı olmadan uygulanır. Taksit seçeneği ödeme adımında kart bilgileri girildiğinde görünür.</p></div>';
+    }
+    li.addEventListener('click',function(e){
+      e.preventDefault(); e.stopImmediatePropagation(); tabloYaz();
+      [].forEach.call(ul.children,function(x){ x.classList.remove('active'); });
+      li.classList.add('active');
+      [].forEach.call(alan.querySelectorAll(':scope > .urunDetayPanel'),function(p){ p.style.display='none'; });
+      pane.style.display='block';
+    },true);
+    ul.addEventListener('click',function(e){
+      var h=e.target.closest('li'); if(!h||h===li) return;
+      pane.style.display='none'; li.classList.remove('active');
+    },true);
+
+    /* fiyat alti satir */
+    var fk=document.getElementById('divTaksitAciklama');
+    if(fk&&!document.getElementById('bbTkSatir')){
+      var s=document.createElement('div'); s.id='bbTkSatir'; s.className='bbTkSatir';
+      s.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#14213d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>'+
+        '<b>Tüm kartlara '+TAKSIT+' taksit</b><span class="bbTk-rozet">Vade farksız</span><a id="bbTkLink">Taksit Seçenekleri ›</a>';
+      fk.parentNode.insertBefore(s,fk.nextSibling);
+      s.querySelector('#bbTkLink').addEventListener('click',function(){
+        li.querySelector('a').click();
+        var y=ul.getBoundingClientRect().top+window.pageYOffset-110;
+        window.scrollTo({top:y,behavior:'smooth'});
+      });
+    }
+
+    /* sekme alanini "diger parcalar" (#bbUyumlu) blogunun ustune al */
+    function sira(){
+      var uy=document.getElementById('bbUyumlu');
+      if(uy&&uy.parentNode===alan.parentNode&&(uy.compareDocumentPosition(alan)&Node.DOCUMENT_POSITION_FOLLOWING))
+        alan.parentNode.insertBefore(alan,uy);
+    }
+    sira();
+    var mo=new MutationObserver(sira); mo.observe(alan.parentNode,{childList:true});
+    setTimeout(function(){ mo.disconnect(); },20000);
+    return true;
+  }
+  function bas(){
+    if(!document.body||!document.body.classList.contains('ProductBody')) return;
+    if(!kur()) window.addEventListener('load',kur);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bas); else bas();
 })();
