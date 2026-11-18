@@ -20,8 +20,9 @@
                   satiri + "Taksit Secenekleri" sekmesi (kart tablosu) +
                   sekme alanini "diger parcalar" blogunun ustune alir
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v18 (v17 + bb-tks: urun sayfasi taksit satiri ve
-              Taksit Secenekleri sekmesi; sekmeler diger parcalarin ustunde)
+   Surum    : v18.1 (v17 + bb-tks: urun sayfasi taksit satiri ve
+              Taksit Secenekleri sekmesi; sekmeler diger parcalarin ustunde.
+              .1: ProductBody sinifina bagimlilik kaldirildi)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -1550,8 +1551,8 @@
   ];
   var st=document.createElement('style'); st.id='bb-tks';
   st.textContent=
-    'body.ProductBody #divTaksitAciklama{display:none!important}'+
-    'body.ProductBody #bbUyumlu{clear:both}'+
+    '#divTaksitAciklama{display:none!important}'+
+    '#bbUyumlu{clear:both}'+
     '.bbTkSatir{flex-basis:100%;width:100%;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0 2px;font-size:13px;color:#374151}'+
     '.bbTkSatir svg{flex:none}'+
     '.bbTkSatir .bbTk-rozet{padding:2px 9px;font-size:11.5px}'+
@@ -1645,9 +1646,8 @@
     setTimeout(function(){ mo.disconnect(); },20000);
     return true;
   }
-  function bas(){
-    if(!document.body||!document.body.classList.contains('ProductBody')) return;
-    if(!kur()) window.addEventListener('load',kur);
-  }
+  /* not: Ticimax "ProductBody" sinifini sayfaya gec ekledigi icin ona bakilmaz;
+     urun sayfasi #divUrunOzellikAlani varligindan anlasilir */
+  function bas(){ if(!kur()) window.addEventListener('load',kur); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bas); else bas();
 })();
