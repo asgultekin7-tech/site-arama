@@ -18,13 +18,12 @@
      - bb-hes   : UYGULAMA Hesabim ana ekrani (Trendyol tarzi kartlar)
      - bb-stokyok: tukenen urunler: liste kartinda "Tukendi" etiketi, urun
                   sayfasinda kompakt bilgi karti + Gelince Haber Ver; kargo
-                  saati ve taksit gizli
+                  ucreti/kargo saati kutulari ve taksit gizli
      - bb-tks   : urun sayfasi taksit: fiyat alti "3 taksit / vade farksiz"
                   satiri + "Taksit Secenekleri" sekmesi (kart tablosu) +
                   sekme alanini "diger parcalar" blogunun ustune alir
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v18.2 (v18.1 + bb-stokyok: tukenen urun gorunumu ve
-              Gelince Haber Ver dugmesi)
+   Surum    : v18.3 (v18.2 + tukenen urunde kargo ucreti kutusu da gizli)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -1660,7 +1659,8 @@
    Urun sayfasi   : buyuk gri "Urun stoklarimizda kalmamistir" blogu yerine kompakt bilgi
                     karti + "Gelince Haber Ver" dugmesi (Ticimax'in kendi stok alarmini
                     calistirir; uye girisi ister, stok gelince e-posta Ticimax'tan gider).
-                    Tukenen urunde "Bugun/Yarin kargoda" kutusu ve taksit satiri/sekmesi gizlenir.
+                    Tukenen urunde kargo ucreti + "Bugun/Yarin kargoda" kutulari (.bbKutular)
+                    ve taksit satiri/sekmesi gizlenir.
    Tukenen urun Ticimax'ta .StokYok sinifiyla gelir; stok girince hepsi kendiliginden eski haline doner. */
 (function(){
   if(window.__bbstokyok) return; window.__bbstokyok=1;
@@ -1672,7 +1672,7 @@
     '.productItem.StokYok [class*="rice"],.productItem.StokYok [class*="rice"] *{color:#9ca3af!important}'+
     /* urun sayfasi */
     'html.bb-stokyok #bbTkSatir,html.bb-stokyok #bbKargoSaat,html.bb-stokyok #liTabTaksit,html.bb-stokyok #bbTaksitPane{display:none!important}'+
-    'html.bb-stokyok .bbKutular{grid-template-columns:minmax(0,520px)!important}'+
+    'html.bb-stokyok .bbKutular{display:none!important}'+
     'html.bb-stokyok #divStokYok{background:none!important;padding:0!important;margin:0 0 14px!important;min-height:0!important;height:auto!important;border:0!important;font-size:0!important;text-align:left!important}'+
     'html.bb-stokyok #divStokYok > :not(.bbSY){display:none!important}'+
     'html.bb-stokyok #divStokYok::before,html.bb-stokyok #divStokYok::after{display:none!important;content:none!important}'+
