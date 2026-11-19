@@ -16,13 +16,15 @@
      - bb-stk   : UYGULAMA urun sayfasi sabit alt bar (fiyat + adet + favori + Sepete Ekle)
      - bb-tab   : UYGULAMA sabit alt menu (Anasayfa/Kategoriler/Sepetim/Favoriler/Hesabim)
      - bb-hes   : UYGULAMA Hesabim ana ekrani (Trendyol tarzi kartlar)
+     - bb-stokyok: tukenen urunler: liste kartinda "Tukendi" etiketi, urun
+                  sayfasinda kompakt bilgi karti + Gelince Haber Ver; kargo
+                  saati ve taksit gizli
      - bb-tks   : urun sayfasi taksit: fiyat alti "3 taksit / vade farksiz"
                   satiri + "Taksit Secenekleri" sekmesi (kart tablosu) +
                   sekme alanini "diger parcalar" blogunun ustune alir
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v18.1 (v17 + bb-tks: urun sayfasi taksit satiri ve
-              Taksit Secenekleri sekmesi; sekmeler diger parcalarin ustunde.
-              .1: ProductBody sinifina bagimlilik kaldirildi)
+   Surum    : v18.2 (v18.1 + bb-stokyok: tukenen urun gorunumu ve
+              Gelince Haber Ver dugmesi)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -1648,6 +1650,72 @@
   }
   /* not: Ticimax "ProductBody" sinifini sayfaya gec ekledigi icin ona bakilmaz;
      urun sayfasi #divUrunOzellikAlani varligindan anlasilir */
+  function bas(){ if(!kur()) window.addEventListener('load',kur); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bas); else bas();
+})();
+
+/* ===== bb-stokyok: tukenen urunlerin gorunumu =====
+   Liste kartlari : soluk gri "TUKENDI" seridi yerine sol ustte koyu "Tukendi" etiketi;
+                    gorsel gri/soluk, fiyat gri.
+   Urun sayfasi   : buyuk gri "Urun stoklarimizda kalmamistir" blogu yerine kompakt bilgi
+                    karti + "Gelince Haber Ver" dugmesi (Ticimax'in kendi stok alarmini
+                    calistirir; uye girisi ister, stok gelince e-posta Ticimax'tan gider).
+                    Tukenen urunde "Bugun/Yarin kargoda" kutusu ve taksit satiri/sekmesi gizlenir.
+   Tukenen urun Ticimax'ta .StokYok sinifiyla gelir; stok girince hepsi kendiliginden eski haline doner. */
+(function(){
+  if(window.__bbstokyok) return; window.__bbstokyok=1;
+  var st=document.createElement('style'); st.id='bb-stokyok';
+  st.textContent=
+    /* liste karti */
+    '.productItem.StokYok a.TukendiIco span{top:10px!important;left:10px!important;right:auto!important;bottom:auto!important;width:auto!important;height:auto!important;padding:5px 11px!important;background:#1e2a3b!important;color:#fff!important;border-radius:999px!important;font-size:11px!important;font-weight:700!important;letter-spacing:.6px!important;line-height:1.2!important;box-shadow:0 2px 6px rgba(0,0,0,.18)!important;transform:none!important}'+
+    '.productItem.StokYok img{filter:grayscale(1)!important;opacity:.55!important}'+
+    '.productItem.StokYok [class*="rice"],.productItem.StokYok [class*="rice"] *{color:#9ca3af!important}'+
+    /* urun sayfasi */
+    'html.bb-stokyok #bbTkSatir,html.bb-stokyok #bbKargoSaat,html.bb-stokyok #liTabTaksit,html.bb-stokyok #bbTaksitPane{display:none!important}'+
+    'html.bb-stokyok .bbKutular{grid-template-columns:minmax(0,520px)!important}'+
+    'html.bb-stokyok #divStokYok{background:none!important;padding:0!important;margin:0 0 14px!important;min-height:0!important;height:auto!important;border:0!important;font-size:0!important;text-align:left!important}'+
+    'html.bb-stokyok #divStokYok > :not(.bbSY){display:none!important}'+
+    'html.bb-stokyok #divStokYok::before,html.bb-stokyok #divStokYok::after{display:none!important;content:none!important}'+
+    '.bbSY{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:14px;background:#fff8ef;border:1px solid #fde2c4;border-left:4px solid #f39200;border-radius:12px;padding:14px 16px;max-width:620px}'+
+    '.bbSY-ic{flex:none;width:40px;height:40px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.08)}'+
+    '.bbSY-txt{flex:1;min-width:200px;line-height:1.4}'+
+    '.bbSY-txt b{display:block;font-size:15px;color:#1e2a3b}'+
+    '.bbSY-txt span{display:block;font-size:13px;color:#4b5563;margin-top:2px}'+
+    '.bbSY-btn{flex:none;display:inline-flex;align-items:center;gap:7px;height:42px;padding:0 18px;border:0;border-radius:10px;background:linear-gradient(135deg,#f7a21b,#ef8a00);color:#fff;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 6px 16px rgba(243,146,0,.3)}'+
+    '.bbSY-btn:hover{filter:brightness(1.05)}'+
+    '.bbSY-btn.on{background:#ecfdf5;color:#15803d;box-shadow:none;border:1px solid #bbf7d0}'+
+    '@media (max-width:600px){.bbSY-btn{width:100%;justify-content:center}}';
+  (document.head||document.documentElement).appendChild(st);
+
+  var ZIL='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
+  var KUTU='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f39200" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>';
+
+  function kur(){
+    var sag=document.querySelector('.RightDetail.StokYok'), kutu=document.getElementById('divStokYok');
+    if(!sag||!kutu) return false;
+    document.documentElement.classList.add('bb-stokyok');
+    if(kutu.querySelector('.bbSY')) return true;
+    var asil=document.getElementById('aGelinceHaberVer');
+    var k=document.createElement('div'); k.className='bbSY';
+    k.innerHTML='<div class="bbSY-ic">'+KUTU+'</div>'+
+      '<div class="bbSY-txt"><b>Bu ürün şu an stokta yok</b><span>Stoğa girdiğinde e-posta ile haber verelim.</span></div>'+
+      (asil?'<button type="button" class="bbSY-btn">'+ZIL+'<span>Gelince Haber Ver</span></button>':'');
+    kutu.appendChild(k);
+    if(!asil) return true;
+    var btn=k.querySelector('.bbSY-btn'), yazi=btn.querySelector('span');
+    function durum(){
+      var on=asil.getAttribute('data-haber')==='1';
+      btn.classList.toggle('on',on);
+      yazi.textContent=on?'Haber vereceğiz ✓':'Gelince Haber Ver';
+      btn.title=on?'Tekrar tıklarsan bildirimi iptal eder':'';
+    }
+    durum();
+    btn.addEventListener('click',function(){
+      if(typeof window.gelinceHaberVer==='function') window.gelinceHaberVer(asil); else asil.click();
+      var n=0, t=setInterval(function(){ durum(); if(++n>20) clearInterval(t); },300);
+    });
+    return true;
+  }
   function bas(){ if(!kur()) window.addEventListener('load',kur); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bas); else bas();
 })();
