@@ -10,9 +10,12 @@
      - bbSliderBoy   : genis ekranda ana slider'in yuksekligini soldaki
        kategori menusunun yuksekligine esitler (gorsel ortalanip
        kirpilir, menu kuculmez). Dar ekranda dokunmaz.
+     - bbSeoGizle    : anasayfa altindaki "Elektrikli Supurge Yedek
+       Parcalari" SEO kutusunu gizler (bilgileri Hakkimizda'ya tasindi).
+       Basligi metninden bulur, panelde hangi blokta oldugu fark etmez.
    Nerede   : Script Yonetimi > 2 - Anasayfa (tek <script src>).
-   Surum    : v5 (v4'teki bbBannerFit ve bbOwlEsitle kaldirildi;
-              urun slider'lari ana sayfadan kalktigi icin gereksiz)
+   Surum    : v6 (bbSeoGizle eklendi; v5: bbBannerFit ve bbOwlEsitle
+              kaldirildi)
    Kaldirmak: Yuvadaki <script src=".../anasayfa.js"> satirini silmek.
    ============================================================== */
 (function(){
@@ -206,4 +209,34 @@
   window.addEventListener('load',function(){ fit(); setTimeout(fit,800); setTimeout(fit,2000); });
   if(document.readyState!=='loading') fit(); else document.addEventListener('DOMContentLoaded',fit);
   var k=0,iv=setInterval(function(){ fit(); if(++k>12) clearInterval(iv); },500);
+})();
+
+/* ===== bbSeoGizle: anasayfa SEO kutusunu gizle ===== */
+(function(){
+  if(window.__bbSeoGizle) return; window.__bbSeoGizle=1;
+  var BASLIK=/^\s*Elektrikli S(ü|u)p(ü|u)rge Yedek Par(ç|c)alar(ı|i)\s*$/i;
+  function korunan(el){ return el.querySelector('#mmzRoot,#bbGuven,.bb-katgrid,.anasayfa_tek_slider,.owl-carousel,footer'); }
+  function gizle(){
+    var hs=document.querySelectorAll('h1,h2,h3,h4,strong,b,div,p,span');
+    for(var i=0;i<hs.length;i++){
+      var h=hs[i];
+      if(h.children.length>2 || !BASLIK.test(h.textContent)) continue;
+      /* 1) Ticimax blok kapsayicisi (bos HTML bloklari) */
+      var hedef=h.closest('section[id^=boshtml],section[id^=htmlblok],.landing-block');
+      if(hedef && korunan(hedef)) hedef=null;
+      /* 2) yoksa: basliktan yukari, sadece bu kutuyu iceren en buyuk eleman */
+      if(!hedef){
+        var el=h;
+        while(el.parentElement && el.parentElement!==document.body){
+          var ust=el.parentElement;
+          if(korunan(ust) || ust.textContent.length>2500) break;
+          el=ust;
+        }
+        hedef=el;
+      }
+      if(hedef && hedef!==document.body){ hedef.style.setProperty('display','none','important'); hedef.setAttribute('data-bbseo','gizli'); return true; }
+    }
+    return false;
+  }
+  var n=0;(function go(){ if(gizle()||++n>40) return; setTimeout(go,250); })();
 })();
