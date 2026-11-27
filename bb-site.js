@@ -8,6 +8,8 @@
      - bb-login : giris / uye ol karti (sayfa izin verirse)
      - bb-social: Uye Girisi'nde Google / Facebook ile devam et butonlari
                   (formun ustunde, 'veya e-posta ile' ayiracli)
+     - bb-kargo : Hesabim > Siparislerim'de kargoya verilen pakete hepsiJET
+                  takip numarasi + Kopyala + Kargoyu Takip Et karti
      - bb-hero  : turuncu marka/model alani (mmz.js) tasarimi
      - bb-acc   : Hesabim sol menu + sag kart
      - bb-accmid: Hesabim orta alan (Siparislerim, Adres Defterim, Hediye Cekleri)
@@ -25,8 +27,7 @@
                   satiri + "Taksit Secenekleri" sekmesi (kart tablosu) +
                   sekme alanini "diger parcalar" blogunun ustune alir
    Nerede   : Script Yonetimi > 10 - Tum Sayfalar - Header (tek satir <script src>)
-   Surum    : v18.4 (v18.3 + bb-social: Google/Facebook ile devam et butonlari
-              Uye Girisi formunun en ustune tasindi ve tasarlandi)
+   Surum    : v18.5 (v18.4 + bb-kargo: Siparislerim'de kargo takip karti)
    Not      : Sadece gorunumu degistirir; siparis, sepet, arama gibi
               islevlere karismaz.
    Kaldirmak: Header yuvasindaki <script src=".../bb-site.js"> satirini silmek.
@@ -1721,4 +1722,67 @@
   }
   function bas(){ if(!kur()) window.addEventListener('load',kur); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bas); else bas();
+})();
+
+/* ===== bb-kargo: Hesabim > Siparislerim'de kargo takip karti =====
+   Ticimax siparis detayinda kargo takip numarasini gostermiyor (kendi
+   takip butonu cogu sipariste gizli kaliyor). Bu blok, kargoya verilen
+   her paketin basligina hepsiJET takip numarasini, "Kopyala" ve
+   "Kargoyu Takip Et" butonlarini ekler. Numara yoksa hicbir sey yapmaz.
+   Sadece Hesabim sayfalarinda calisir; web ve mobil uygulamada ayni. */
+(function(){
+  if(window.__bbkargo) return; window.__bbkargo=1;
+  if(!/\/hesabim/i.test(location.pathname)) return;
+  var TAKIP_URL='https://www.hepsijet.com/gonderi-takibi/';
+  var st=document.createElement('style'); st.id='bb-kargo';
+  st.textContent=
+    '.bbKargo{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;margin:10px 14px 4px;padding:12px 14px;background:#fff8ef;border:1.5px solid #f8d9ad;border-radius:14px;font-size:13.5px;color:#3d4757;line-height:1.4}'+
+    '.bbKargo .bbK-ic{font-size:20px;line-height:1}'+
+    '.bbKargo .bbK-txt{flex:1 1 220px;min-width:0}'+
+    '.bbKargo .bbK-txt b{color:#1e2a3b;letter-spacing:.02em;word-break:break-all}'+
+    '.bbKargo .bbK-firma{display:block;font-size:12px;color:#8a94a3;margin-bottom:2px}'+
+    '.bbKargo .bbK-btns{display:flex;gap:8px;flex-wrap:wrap}'+
+    '.bbKargo .bbK-kop,.bbKargo .bbK-git{display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 14px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none!important;cursor:pointer;white-space:nowrap;box-sizing:border-box}'+
+    '.bbKargo .bbK-kop{background:#fff;border:1.5px solid #e3e7ee;color:#1e2a3b}'+
+    '.bbKargo .bbK-kop:hover{border-color:#f39200;color:#e07f00}'+
+    '.bbKargo .bbK-git{background:linear-gradient(135deg,#f7a21b,#ef8a00);border:0;color:#fff!important;box-shadow:0 6px 14px rgba(243,146,0,.30)}'+
+    '.bbKargo .bbK-git:hover{filter:brightness(1.05)}'+
+    '.bbKargo .bbK-not{flex-basis:100%;font-size:12px;color:#8a94a3}'+
+    '@media (max-width:600px){.bbKargo{margin:8px 8px 2px}.bbKargo .bbK-btns{width:100%}.bbKargo .bbK-kop,.bbKargo .bbK-git{flex:1 1 0}}';
+  (document.head||document.documentElement).appendChild(st);
+
+  function no(el){
+    try{ var sc=window.angular && angular.element(el).scope(); var p=sc && sc.package;
+      var n=p && p.kargo_Takip_Numarasi; return n ? String(n).trim() : ''; }catch(e){ return ''; }
+  }
+  function kopyala(txt,btn){
+    function ok(){ var e=btn.textContent; btn.textContent='Kopyalandı ✓'; setTimeout(function(){btn.textContent=e;},1600); }
+    try{ navigator.clipboard.writeText(txt).then(ok,function(){ eski(); }); }catch(e){ eski(); }
+    function eski(){ var t=document.createElement('textarea'); t.value=txt; t.style.position='fixed'; t.style.opacity='0'; document.body.appendChild(t); t.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(t); ok(); }
+  }
+  function isle(){
+    var ps=document.querySelectorAll('.package-item');
+    for(var i=0;i<ps.length;i++){
+      var el=ps[i], n=no(el);
+      var var_=el.querySelector('.bbKargo');
+      if(!n){ if(var_) var_.parentNode.removeChild(var_); continue; }
+      if(var_ && var_.getAttribute('data-no')===n) continue;
+      if(var_) var_.parentNode.removeChild(var_);
+      var k=document.createElement('div'); k.className='bbKargo'; k.setAttribute('data-no',n);
+      k.innerHTML='<span class="bbK-ic">🚚</span>'+
+        '<span class="bbK-txt"><span class="bbK-firma">hepsiJET kargo takip numarası</span><b></b></span>'+
+        '<span class="bbK-btns"><button type="button" class="bbK-kop">Kopyala</button>'+
+        '<a class="bbK-git" target="_blank" rel="noopener">Kargoyu Takip Et</a></span>'+
+        '<span class="bbK-not">Gönderiniz dağıtıma çıktığında hepsiJET takip ekranında kuryenin konumunu görebilirsiniz.</span>';
+      k.querySelector('b').textContent=n;
+      k.querySelector('.bbK-git').href=TAKIP_URL+encodeURIComponent(n);
+      (function(num,b){ b.addEventListener('click',function(){ kopyala(num,b); }); })(n,k.querySelector('.bbK-kop'));
+      var h=el.querySelector('.package-item-header');
+      if(h && h.parentNode===el) el.insertBefore(k,h.nextSibling); else el.insertBefore(k,el.firstChild);
+    }
+  }
+  var t=null; function plan(){ clearTimeout(t); t=setTimeout(isle,150); }
+  if(window.MutationObserver) new MutationObserver(plan).observe(document.documentElement,{childList:true,subtree:true});
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',plan); else plan();
+  window.addEventListener('load',plan); window.addEventListener('hashchange',plan);
 })();
